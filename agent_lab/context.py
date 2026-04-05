@@ -41,7 +41,7 @@ Instructions:
         tool_calls: list[dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
         """Build an assistant message."""
-        msg = {"role": "assistant", "content": content or ""}
+        msg: dict[str, Any] = {"role": "assistant", "content": content or ""}
         if tool_calls:
             msg["tool_calls"] = tool_calls
         return msg
