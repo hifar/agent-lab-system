@@ -1,0 +1,16 @@
+{
+  "user_id": "demo-user",
+  "language": "zh-CN",
+  "technical_level": "advanced",
+  "preferences": {
+    "response_style": "direct",
+    "code_style": "typed_python",
+    "default_model_provider": "openai-compatible",
+    "show_cli_examples": true
+  },
+  "goals": [
+    "build a minimal but extensible agent system",
+    "support openai-compatible external integration",
+    "maintain good architecture and clear docs"
+  ]
+}

@@ -35,6 +35,8 @@ class ChatCompletionRequest(BaseModel):
     temperature: float | None = None
     tools: list[dict[str, Any]] | None = None
     tool_choice: str | dict[str, Any] | None = None
+    think_mode: bool | None = None
+    streaming_mode: bool | None = None
     stream: bool = False
 
 
@@ -138,13 +140,13 @@ def create_app(config_path: str | None = None) -> FastAPI:
 
     @app.post("/v1/chat/completions")
     async def chat_completions(request: ChatCompletionRequest) -> dict[str, Any]:
-        if request.stream:
-            raise HTTPException(status_code=400, detail="stream=true is not supported yet")
         if request.tools:
             raise HTTPException(
                 status_code=400,
                 detail="request.tools is not supported yet; API uses configured built-in agent tools",
             )
+
+        resolved_streaming = request.streaming_mode if request.streaming_mode is not None else request.stream
 
         provider = create_provider(cfg, request.model)
         tools = _build_registry(cfg)
@@ -157,6 +159,8 @@ def create_app(config_path: str | None = None) -> FastAPI:
             max_iterations=cfg.agents.defaults.max_iterations,
             max_tokens=cfg.agents.defaults.max_tokens,
             temperature=cfg.agents.defaults.temperature,
+            enable_think_mode=cfg.agents.defaults.enable_think_mode,
+            enable_streaming_mode=cfg.agents.defaults.enable_streaming_mode,
         )
 
         try:
@@ -167,6 +171,8 @@ def create_app(config_path: str | None = None) -> FastAPI:
                 max_tokens=request.max_tokens,
                 temperature=request.temperature,
                 tool_choice=request.tool_choice,
+                enable_think_mode=request.think_mode,
+                enable_streaming_mode=resolved_streaming,
             )
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc

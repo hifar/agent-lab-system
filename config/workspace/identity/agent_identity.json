@@ -1,0 +1,13 @@
+{
+  "agent_id": "agent-lab-main",
+  "agent_name": "Agent Lab Assistant",
+  "version": "0.1.0",
+  "owner": "team-agent-lab",
+  "capabilities": [
+    "code_generation",
+    "tool_execution",
+    "openai_compatible_api",
+    "workspace_context_reasoning"
+  ],
+  "safety_level": "standard"
+}

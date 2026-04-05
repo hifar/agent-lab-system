@@ -6,7 +6,16 @@ from pathlib import Path
 class Workspace:
     """Manages agent workspace."""
 
-    SUBDIRS = ["skills", "memories", "sessions"]
+    SUBDIRS = [
+        "skills",
+        "knowledge",
+        "memories",
+        "sessions",
+        "prompts",
+        "identity",
+        "profile",
+        "state",
+    ]
 
     def __init__(self, path: Path) -> None:
         """Initialize workspace."""

@@ -4,6 +4,22 @@
 
 已成功完成**最小化 Agent 系统**，基于 Python 3.12，采用精简优雅的设计，符合所有主要要求。
 
+## 🔄 增量更新（2026-04-05）
+
+- 新增 OpenAI 兼容 API 服务，支持外部系统通过 `/v1/chat/completions` 调用 Agent。
+- 新增 CLI `agent-lab api` 命令用于启动 API 服务。
+- Provider 层兼容性增强（OpenAI 与 Anthropic 工具调用链路修复）。
+- 新增 `enable_think_mode` 与 `enable_streaming_mode` 参数，支持 CLI/API 请求级覆盖。
+- Agent 自动读取 workspace 内容注入系统提示：
+  - `prompts/agent.md`
+  - `identity/agent_identity.json`
+  - `profile/user_profile.json`
+  - `memories/long_term.md`
+  - `state/runtime_notes.md`
+  - `state/policies.md`
+  - `skills/*/SKILL.md`
+- 新增示例配置与工作区模板：`config/config.json`、`config/agent.md`、`config/workspace/*`。
+
 ## ✅ 完成清单
 
 ### 核心功能模块

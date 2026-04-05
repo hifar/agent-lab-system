@@ -4,6 +4,15 @@
 **Python 版本**: 3.12  
 **项目状态**: ✅ **生产就绪（MVP）**
 
+## 🔄 增量更新（2026-04-05）
+
+1. 新增 OpenAI 兼容 HTTP API：`GET /health`、`GET /v1/models`、`POST /v1/chat/completions`。
+2. 新增 CLI 命令：`agent-lab api --host --port`，外部工具可通过 OpenAI 协议访问 Agent。
+3. 修复 Provider 协议兼容问题：OpenAI tools 包装、Anthropic tool_result 回传、provider 自动识别与 extra_headers 透传。
+4. 新增 think/streaming 模式参数贯通：Config → CLI/API → Agent → Provider。
+5. Agent 支持自动读取 workspace 上下文：系统提示词、长期记忆、Agent 标识、用户画像、运行策略、skills 摘要。
+6. 新增配置样例与工作区样例：`config/config.json`、`config/agent.md`、`config/workspace/*`。
+
 ---
 
 ## 🎯 核心成就

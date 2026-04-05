@@ -86,6 +86,8 @@ def config(
         table.add_row("workspace", cfg.agents.defaults.workspace)
         table.add_row("max_iterations", str(cfg.agents.defaults.max_iterations))
         table.add_row("temperature", str(cfg.agents.defaults.temperature))
+        table.add_row("enable_think_mode", str(cfg.agents.defaults.enable_think_mode))
+        table.add_row("enable_streaming_mode", str(cfg.agents.defaults.enable_streaming_mode))
         console.print(table)
         console.print(f"\nConfig file: {config_path}")
     else:
@@ -98,6 +100,12 @@ def chat(
     model: str | None = typer.Option(None, "--model", "-m", help="Model override"),
     session: str = typer.Option("default", "--session", "-s", help="Session ID"),
     clear: bool = typer.Option(False, "--clear", help="Clear session history"),
+    think: bool | None = typer.Option(None, "--think/--no-think", help="Enable think mode"),
+    streaming: bool | None = typer.Option(
+        None,
+        "--streaming/--no-streaming",
+        help="Enable streaming mode (currently non-streaming fallback)",
+    ),
 ) -> None:
     """Chat with the agent."""
     config_path = get_default_config_path()
@@ -155,6 +163,8 @@ def chat(
         max_iterations=cfg.agents.defaults.max_iterations,
         max_tokens=cfg.agents.defaults.max_tokens,
         temperature=cfg.agents.defaults.temperature,
+        enable_think_mode=cfg.agents.defaults.enable_think_mode,
+        enable_streaming_mode=cfg.agents.defaults.enable_streaming_mode,
     )
 
     async def run_chat():
@@ -183,10 +193,40 @@ def chat(
         # Run agent
         try:
             console.print()
-            response, messages = await agent.run(user_message, history)
+
+            streaming_enabled = streaming if streaming is not None else cfg.agents.defaults.enable_streaming_mode
+
+            if streaming_enabled:
+                console.print("[cyan]Agent:[/cyan] ", end="")
+
+                async def on_delta(chunk: str) -> None:
+                    if chunk:
+                        console.print(chunk, end="", markup=False, highlight=False)
+
+                response, messages = await agent.run(
+                    user_message,
+                    history,
+                    enable_think_mode=think,
+                    enable_streaming_mode=streaming,
+                    on_content_delta=on_delta,
+                )
+                console.print()
+            else:
+                response, messages = await agent.run(
+                    user_message,
+                    history,
+                    enable_think_mode=think,
+                    enable_streaming_mode=streaming,
+                )
+                console.print(f"[cyan]Agent:[/cyan] {response}\n")
+
             sess.save_history(messages)
 
-            console.print(f"[cyan]Agent:[/cyan] {response}\n")
+            if streaming_enabled and not response:
+                console.print()
+            elif streaming_enabled and response:
+                # Streaming path already printed deltas; keep spacing consistent.
+                console.print()
 
         except KeyboardInterrupt:
             console.print("\n[yellow]Interrupted.[/yellow]")

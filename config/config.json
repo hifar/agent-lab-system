@@ -1,0 +1,38 @@
+{
+  "agents": {
+    "defaults": {
+      "model": "qwen3.5-flash",
+      "provider": "openai",
+      "max_tokens": 4096,
+      "temperature": 0.4,
+      "max_iterations": 20,
+      "enable_think_mode": true,
+      "enable_streaming_mode": false,
+      "workspace": "~/.agent-lab/workspace"
+    }
+  },
+  "providers": {
+    "openai": {
+      "api_key": "<YOUR_OPENAI_OR_COMPATIBLE_KEY>",
+      "api_base": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+      "extra_headers": {
+        "X-DashScope-SSE": "disable"
+      }
+    },
+    "anthropic": {
+      "api_key": "<YOUR_ANTHROPIC_KEY>",
+      "api_base": "https://api.anthropic.com",
+      "extra_headers": null
+    },
+    "custom": {
+      "api_key": "",
+      "api_base": "http://127.0.0.1:8000/v1",
+      "extra_headers": null
+    }
+  },
+  "tools": {
+    "enable_read_file": true,
+    "enable_write_file": true,
+    "enable_list_dir": true
+  }
+}

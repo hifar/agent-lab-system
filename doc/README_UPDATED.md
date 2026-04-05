@@ -4,6 +4,13 @@ Minimal agent system for Python 3.12, optimized for simplicity and extensibility
 
 **Status**: ✅ Production Ready (MVP) | [See Complete Summary](FINAL_SUMMARY.md)
 
+## Recent Updates (2026-04-05)
+
+- Added OpenAI-compatible API server and CLI command `agent-lab api`.
+- Added think/streaming switches end-to-end (Config, CLI, API, Agent, Provider).
+- Added workspace semantic context loading from prompts, identity, profile, memories, state, and skills.
+- Added config/workspace templates under `config/` for fast bootstrap.
+
 ## Quick Links
 
 - 🚀 [Quick Start](QUICKSTART.md) - Get started in 5 minutes

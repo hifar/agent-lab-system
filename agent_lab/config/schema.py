@@ -38,6 +38,8 @@ class AgentDefaults(Base):
     max_tokens: int = 4096
     temperature: float = 0.7
     max_iterations: int = 20
+    enable_think_mode: bool = False
+    enable_streaming_mode: bool = False
     workspace: str = "~/.agent-lab/workspace"
 
 

@@ -3,6 +3,18 @@
 **完成时间**: 2026-04-05  
 **项目状态**: ✅ **生产就绪（MVP）**
 
+## 🔄 最近修改总结（2026-04-05）
+
+- 新增 OpenAI 兼容 API 模块：`agent_lab/api/server.py`。
+- 新增 API 启动命令：`agent-lab api`。
+- Agent/Provider/API 增加 think/streaming 参数：
+    - `enable_think_mode`
+    - `enable_streaming_mode`
+    - API 兼容字段：`think_mode`、`streaming_mode`、`stream`
+- Agent 增加 workspace 上下文自动加载能力（提示词、记忆、画像、策略、skills）。
+- Workspace 目录扩展：`prompts`、`identity`、`profile`、`state`。
+- 新增配置与工作区示例：`config/config.json`、`config/agent.md`、`config/workspace/*`。
+
 ---
 
 ## 📦 交付成果

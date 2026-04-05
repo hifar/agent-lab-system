@@ -52,6 +52,8 @@ class LLMProvider(ABC):
         max_tokens: int = 4096,
         temperature: float = 0.7,
         tool_choice: str | dict[str, Any] | None = None,
+        enable_think_mode: bool = False,
+        enable_streaming_mode: bool = False,
     ) -> LLMResponse:
         """
         Send a chat completion request.
@@ -63,7 +65,39 @@ class LLMProvider(ABC):
             max_tokens: Maximum tokens in response.
             temperature: Sampling temperature.
             tool_choice: Tool selection strategy ("auto", "required", or specific tool dict).
+            enable_think_mode: Whether to enable provider thinking/reasoning mode.
+            enable_streaming_mode: Whether to request streaming mode.
 
         Returns:
             LLMResponse with content and/or tool calls.
         """
+
+    async def chat_stream(
+        self,
+        messages: list[dict[str, Any]],
+        tools: list[dict[str, Any]] | None = None,
+        model: str | None = None,
+        max_tokens: int = 4096,
+        temperature: float = 0.7,
+        tool_choice: str | dict[str, Any] | None = None,
+        enable_think_mode: bool = False,
+        enable_streaming_mode: bool = True,
+        on_content_delta: Any | None = None,
+    ) -> LLMResponse:
+        """Stream chat completion content if provider supports it.
+
+        Default behavior falls back to ``chat`` and emits one full-content delta.
+        """
+        response = await self.chat(
+            messages=messages,
+            tools=tools,
+            model=model,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            tool_choice=tool_choice,
+            enable_think_mode=enable_think_mode,
+            enable_streaming_mode=enable_streaming_mode,
+        )
+        if on_content_delta and response.content:
+            await on_content_delta(response.content)
+        return response

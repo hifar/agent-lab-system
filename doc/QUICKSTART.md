@@ -57,6 +57,12 @@ agent-lab init
 }
 ```
 
+也可以直接参考项目内模板：
+
+- `config/config.json`
+- `config/agent.md`
+- `config/workspace/`
+
 ### 4. 基本命令
 
 ```bash
@@ -78,6 +84,12 @@ agent-lab chat -m "gpt-4-turbo" "Your message here"
 # 使用特定会话
 agent-lab chat -s "session-name" "Your message"
 
+# 启用 think 模式
+agent-lab chat --think "帮我分析这个设计方案"
+
+# 显式切换 streaming 模式（CLI 会增量输出）
+agent-lab chat --streaming "给我一个 Python 示例"
+
 # 启动 OpenAI 兼容 API 服务
 agent-lab api --host 127.0.0.1 --port 8000
 ```
@@ -95,6 +107,8 @@ curl http://127.0.0.1:8000/v1/chat/completions \
       {"role": "system", "content": "You are helpful."},
       {"role": "user", "content": "帮我看看当前目录里有什么"}
     ],
+    "think_mode": true,
+    "streaming_mode": false,
     "temperature": 0.3,
     "max_tokens": 800
   }'
@@ -106,7 +120,8 @@ curl http://127.0.0.1:8000/v1/chat/completions \
 - `POST /v1/chat/completions`
 
 当前限制：
-- 暂不支持 `stream=true`
+- CLI `--streaming` 已支持增量显示（OpenAI 兼容与 Anthropic provider）
+- API 的 `streaming_mode` / `stream` 目前仍返回非流式一次性 JSON
 - 暂不支持请求体传入 `tools`（使用本地已配置内置工具）
 
 ## 架构概览

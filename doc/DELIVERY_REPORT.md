@@ -4,6 +4,38 @@
 **系统状态**: ✅ **M1-M5 全部完成，可用**  
 **代码质量**: ✅ 精简优雅，符合 Python 规范
 
+## 🔄 增量交付（2026-04-05）
+
+### API 与协议
+
+- 新增 OpenAI 兼容 API 服务：
+    - `GET /health`
+    - `GET /v1/models`
+    - `POST /v1/chat/completions`
+- 新增 CLI API 启动命令：`agent-lab api --host --port`
+
+### Agent 与 Provider
+
+- 新增 think/streaming 参数贯通：
+    - Config 默认值：`enable_think_mode`、`enable_streaming_mode`
+    - CLI 参数：`--think/--no-think`、`--streaming/--no-streaming`
+    - API 参数：`think_mode`、`streaming_mode`（兼容 `stream`）
+- Provider 协议兼容修复：OpenAI tool schema、Anthropic tool_result、factory 自动识别。
+
+### Workspace 语义上下文
+
+- Agent 现在会自动读取 workspace 内容并注入系统提示：
+    - `prompts/agent.md`（系统提示词）
+    - `identity/agent_identity.json`（Agent 标识）
+    - `profile/user_profile.json`（用户画像）
+    - `memories/long_term.md`（长期记忆）
+    - `state/runtime_notes.md`、`state/policies.md`（运行状态与策略）
+    - `skills/*/SKILL.md`（技能摘要）
+
+### 示例模板
+
+- 新增：`config/config.json`、`config/agent.md`、`config/workspace/*`。
+
 ---
 
 ## 📦 交付物清单

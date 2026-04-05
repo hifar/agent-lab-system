@@ -86,6 +86,8 @@ async def chat(
     max_tokens: int = 4096,
     temperature: float = 0.7,
     tool_choice: str | dict | None = None,
+  enable_think_mode: bool = False,
+  enable_streaming_mode: bool = False,
 ) -> LLMResponse
 ```
 
@@ -120,6 +122,11 @@ class ToolRegistry:
 async def run(
     message: str,
     history: list[dict] | None = None,
+  max_tokens: int | None = None,
+  temperature: float | None = None,
+  tool_choice: str | dict | None = None,
+  enable_think_mode: bool | None = None,
+  enable_streaming_mode: bool | None = None,
 ) -> tuple[str, list[dict]]
 ```
 
@@ -206,6 +213,8 @@ FastAPI API
       "max_tokens": 4096,
       "temperature": 0.7,
       "max_iterations": 20,
+      "enable_think_mode": false,
+      "enable_streaming_mode": false,
       "workspace": "~/.agent-lab/workspace"
     }
   },
@@ -240,12 +249,16 @@ FastAPI API
 ~/.agent-lab/
 ├── config.json                    # 全局配置
 └── workspace/
+  ├── prompts/                   # 系统提示词
+  ├── identity/                  # Agent 标识
+  ├── profile/                   # 用户画像
     ├── skills/                    # 技能库（用户可添加）
     │   ├── skill1/
     │   │   └── SKILL.md
     │   └── skill2/
     │       └── SKILL.md
     ├── memories/                  # 记忆存储（预留）
+  ├── state/                     # 运行状态与策略
     └── sessions/                  # 对话历史
         ├── default.json           # 默认会话
         └── other-session.json
