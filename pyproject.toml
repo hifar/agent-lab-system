@@ -23,6 +23,8 @@ dependencies = [
     "pydantic-settings>=2.0",
     "httpx>=0.24.0",
     "typer>=0.9.0",
+    "fastapi>=0.115.0",
+    "uvicorn>=0.30.0",
     "rich>=13.0.0",
     "python-dotenv>=1.0.0",
 ]
@@ -40,7 +42,10 @@ dev = [
 agent-lab = "agent_lab.cli:main"
 
 [tool.setuptools]
-packages = ["agent_lab"]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+include = ["agent_lab*"]
 
 [tool.setuptools.package-data]
 agent_lab = [

@@ -16,14 +16,38 @@ class OpenAICompatProvider(LLMProvider):
         api_key: str | None = None,
         api_base: str | None = None,
         default_model: str = "gpt-4o",
+        extra_headers: dict[str, str] | None = None,
     ) -> None:
         """Initialize OpenAI-compatible provider."""
         super().__init__(api_key, api_base, default_model)
+        headers: dict[str, str] = {}
+        if api_key:
+            headers["Authorization"] = f"Bearer {api_key}"
+        if extra_headers:
+            headers.update(extra_headers)
+
         self.client = httpx.AsyncClient(
             base_url=api_base or "https://api.openai.com/v1",
-            headers={"Authorization": f"Bearer {api_key}"} if api_key else {},
+            headers=headers,
             timeout=300.0,
         )
+
+    @staticmethod
+    def _normalize_tools(tools: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Normalize tool definitions to OpenAI-compatible format."""
+        normalized: list[dict[str, Any]] = []
+        for tool in tools:
+            # Already OpenAI shape: {"type": "function", "function": {...}}
+            if isinstance(tool.get("function"), dict):
+                normalized.append({
+                    "type": tool.get("type", "function"),
+                    "function": tool["function"],
+                })
+                continue
+
+            # Bare function schema shape: {"name": ..., "description": ..., "parameters": ...}
+            normalized.append({"type": "function", "function": tool})
+        return normalized
 
     async def chat(
         self,
@@ -42,12 +66,13 @@ class OpenAICompatProvider(LLMProvider):
             "model": model_name,
             "messages": messages,
             "temperature": temperature,
-            "max_tokens": max_tokens,
+            "max_tokens": max(1, max_tokens),
         }
 
         if tools:
-            payload["tools"] = [{"type": "function", "function": t} for t in tools]
-            payload["tool_choice"] = tool_choice or "auto"
+            payload["tools"] = self._normalize_tools(tools)
+            if tool_choice != "none":
+                payload["tool_choice"] = tool_choice or "auto"
 
         try:
             response = await self.client.post("/chat/completions", json=payload)
@@ -67,7 +92,10 @@ class OpenAICompatProvider(LLMProvider):
                         func = tc.get("function", {})
                         args = func.get("arguments", "{}")
                         if isinstance(args, str):
-                            args = json.loads(args)
+                            try:
+                                args = json.loads(args)
+                            except json.JSONDecodeError:
+                                args = {}
                         tool_calls.append(
                             ToolCall(
                                 id=tc.get("id", ""),
@@ -88,6 +116,17 @@ class OpenAICompatProvider(LLMProvider):
                 },
             )
 
+        except httpx.HTTPStatusError as e:
+            detail = ""
+            try:
+                detail = e.response.text
+            except Exception:
+                detail = ""
+            status = e.response.status_code if e.response is not None else "unknown"
+            message = f"Error: HTTP {status} calling {e.request.url if e.request else '/chat/completions'}"
+            if detail:
+                message += f" | response: {detail}"
+            return LLMResponse(content=message, finish_reason="error")
         except httpx.HTTPError as e:
             return LLMResponse(content=f"Error: {e}", finish_reason="error")
 

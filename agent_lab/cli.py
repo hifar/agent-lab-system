@@ -4,6 +4,7 @@ import asyncio
 from pathlib import Path
 
 import typer
+import uvicorn
 from rich.console import Console
 from rich.table import Table
 
@@ -14,6 +15,7 @@ from agent_lab.providers import create_provider
 from agent_lab.session import Session
 from agent_lab.tools import ReadFileTool, WriteFileTool, ListDirTool, ToolRegistry
 from agent_lab.workspace import Workspace
+from agent_lab.api.server import create_app
 
 app = typer.Typer(help=f"{__logo__} agent-lab - Minimal agent system")
 console = Console()
@@ -151,6 +153,8 @@ def chat(
         workspace=workspace_path,
         model=model,
         max_iterations=cfg.agents.defaults.max_iterations,
+        max_tokens=cfg.agents.defaults.max_tokens,
+        temperature=cfg.agents.defaults.temperature,
     )
 
     async def run_chat():
@@ -250,6 +254,18 @@ def skills_list() -> None:
     console.print("\n[cyan]Available Skills[/cyan]")
     for skill in skill_list:
         console.print(f"  • {skill}")
+
+
+@app.command("api")
+def run_api(
+    host: str = typer.Option("127.0.0.1", "--host", help="API host"),
+    port: int = typer.Option(8000, "--port", help="API port"),
+    config_path: str | None = typer.Option(None, "--config", help="Path to config file"),
+) -> None:
+    """Run OpenAI-compatible HTTP API server."""
+    app_instance = create_app(config_path=config_path)
+    console.print(f"[green]Starting API server on http://{host}:{port}[/green]")
+    uvicorn.run(app_instance, host=host, port=port)
 
 
 def main() -> None:

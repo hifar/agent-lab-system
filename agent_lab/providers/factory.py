@@ -10,10 +10,11 @@ def create_provider(config: Config, model: str | None = None) -> LLMProvider:
     """Create an LLM provider based on configuration."""
     model_name = model or config.agents.defaults.model
     provider_name = config.agents.defaults.provider
+    model_lower = model_name.lower()
 
     # Auto-detect provider from model name
     if provider_name == "auto":
-        if model_name.startswith("claude"):
+        if "claude" in model_lower:
             provider_name = "anthropic"
         else:
             provider_name = "openai"
@@ -26,6 +27,7 @@ def create_provider(config: Config, model: str | None = None) -> LLMProvider:
             api_key=prov_config.api_key or None,
             api_base=prov_config.api_base,
             default_model=model_name,
+            extra_headers=prov_config.extra_headers,
         )
     elif provider_name == "openai":
         prov_config = config.providers.openai
@@ -34,6 +36,7 @@ def create_provider(config: Config, model: str | None = None) -> LLMProvider:
             api_key=prov_config.api_key or None,
             api_base=prov_config.api_base,
             default_model=model_name,
+            extra_headers=prov_config.extra_headers,
         )
     elif provider_name == "custom":
         prov_config = config.providers.custom
@@ -41,6 +44,7 @@ def create_provider(config: Config, model: str | None = None) -> LLMProvider:
             api_key=prov_config.api_key or None,
             api_base=prov_config.api_base or "http://localhost:8000/v1",
             default_model=model_name,
+            extra_headers=prov_config.extra_headers,
         )
     else:
         raise ValueError(f"Unknown provider: {provider_name}")

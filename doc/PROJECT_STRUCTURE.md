@@ -17,6 +17,10 @@ agent-lab-system/
 │   ├── context.py             # 上下文构建
 │   ├── session.py             # 会话管理
 │   │
+│   ├── api/                   # OpenAI 兼容 API
+│   │   ├── __init__.py
+│   │   └── server.py          # FastAPI 服务
+│   │
 │   ├── config/                # 配置模块
 │   │   ├── __init__.py
 │   │   ├── schema.py          # Pydantic 模型
@@ -152,6 +156,14 @@ async def run(
 | `chat` | 与 Agent 聊天 |
 | `tools-list` | 列出工具 |
 | `skills-list` | 列出技能 |
+| `api` | 启动 OpenAI 兼容 API 服务 |
+
+### 10. API 服务 (`agent_lab/api/`)
+
+| 文件 | 类/函数 | 职责 |
+|------|---------|------|
+| `server.py` | `create_app()` | 创建 FastAPI 应用并暴露 OpenAI 兼容端点 |
+| `__init__.py` | - | API 模块导出 |
 
 ## 类关系图
 
@@ -172,6 +184,13 @@ CLI
 │   ├── ToolRegistry
 │   └── ContextBuilder
 └── Session
+
+FastAPI API
+├── create_app()
+├── Agent
+│   ├── Provider (Factory.create_provider)
+│   └── ToolRegistry
+└── OpenAI-compatible HTTP response
 ```
 
 ## 配置文件格式

@@ -1,5 +1,6 @@
 """Agent main loop and execution logic."""
 
+import json
 from pathlib import Path
 from typing import Any
 
@@ -17,6 +18,8 @@ class Agent:
         workspace: Path,
         model: str | None = None,
         max_iterations: int = 20,
+        max_tokens: int = 4096,
+        temperature: float = 0.7,
         system_prompt: str | None = None,
     ) -> None:
         """Initialize agent."""
@@ -25,6 +28,8 @@ class Agent:
         self.workspace = workspace
         self.model = model or provider.default_model
         self.max_iterations = max_iterations
+        self.max_tokens = max_tokens
+        self.temperature = temperature
         self._system_prompt = system_prompt
 
     def _build_system_prompt(self) -> str:
@@ -48,6 +53,9 @@ Be concise and direct in your responses."""
         self,
         message: str,
         history: list[dict[str, Any]] | None = None,
+        max_tokens: int | None = None,
+        temperature: float | None = None,
+        tool_choice: str | dict[str, Any] | None = None,
     ) -> tuple[str, list[dict[str, Any]]]:
         """
         Run the agent on a message.
@@ -55,6 +63,9 @@ Be concise and direct in your responses."""
         Args:
             message: User message
             history: Previous conversation history
+            max_tokens: Optional max tokens override
+            temperature: Optional temperature override
+            tool_choice: Optional tool choice override
 
         Returns:
             (final_response, updated_messages)
@@ -78,6 +89,9 @@ Be concise and direct in your responses."""
                 messages=messages,
                 tools=self.tools.get_definitions() if self.tools.tool_names else None,
                 model=self.model,
+                max_tokens=max_tokens if max_tokens is not None else self.max_tokens,
+                temperature=temperature if temperature is not None else self.temperature,
+                tool_choice=tool_choice,
             )
 
             # Add assistant response to messages
@@ -85,6 +99,18 @@ Be concise and direct in your responses."""
                 "role": "assistant",
                 "content": response.content,
             }
+            if response.has_tool_calls:
+                assistant_msg["tool_calls"] = [
+                    {
+                        "id": tc.id,
+                        "type": "function",
+                        "function": {
+                            "name": tc.name,
+                            "arguments": json.dumps(tc.arguments, ensure_ascii=False),
+                        },
+                    }
+                    for tc in response.tool_calls
+                ]
             messages.append(assistant_msg)
 
             # Check for tool calls

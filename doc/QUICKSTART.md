@@ -77,7 +77,37 @@ agent-lab chat -m "gpt-4-turbo" "Your message here"
 
 # 使用特定会话
 agent-lab chat -s "session-name" "Your message"
+
+# 启动 OpenAI 兼容 API 服务
+agent-lab api --host 127.0.0.1 --port 8000
 ```
+
+### 5. 通过 OpenAI 协议调用 Agent
+
+服务启动后，可以通过 OpenAI Chat Completions 协议调用：
+
+```bash
+curl http://127.0.0.1:8000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "qwen3.5-flash",
+    "messages": [
+      {"role": "system", "content": "You are helpful."},
+      {"role": "user", "content": "帮我看看当前目录里有什么"}
+    ],
+    "temperature": 0.3,
+    "max_tokens": 800
+  }'
+```
+
+可用端点：
+- `GET /health`
+- `GET /v1/models`
+- `POST /v1/chat/completions`
+
+当前限制：
+- 暂不支持 `stream=true`
+- 暂不支持请求体传入 `tools`（使用本地已配置内置工具）
 
 ## 架构概览
 
@@ -97,6 +127,9 @@ agent-lab/
 │   └── builtin.py       # 内置工具
 ├── agent/              # Agent 循环
 │   └── __init__.py      # Agent 主类
+├── api/                # OpenAI 兼容 API
+│   ├── __init__.py
+│   └── server.py        # FastAPI 服务
 ├── workspace/          # 工作区管理
 │   └── __init__.py
 ├── skills/             # 技能管理
@@ -189,6 +222,11 @@ class MyProvider(LLMProvider):
 ### "API key not configured"
 1. 检查 `~/.agent-lab/config.json`
 2. 设置对应提供商的 `api_key`
+
+### API 调用返回 400
+1. 检查 `model` 是否是当前 provider 支持的模型
+2. 检查 `messages` 是否至少包含一条 user 消息
+3. 如果使用 DashScope/OpenAI 兼容网关，确认 `api_base` 和 `extra_headers` 正确
 
 ### 模型不可用
 检查配置中的 `model` 字段，确保与提供商兼容

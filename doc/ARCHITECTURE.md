@@ -144,6 +144,21 @@ class MyTool(Tool):
 - `chat` - 聊天（单轮或多轮）
 - `tools-list` - 列出工具
 - `skills-list` - 列出技能
+- `api` - 启动 OpenAI 兼容 HTTP API
+
+#### 10. API 服务（`api/server.py`）
+
+**职责：** 对外暴露 OpenAI 兼容接口，让外部工具通过 HTTP 调用 agent
+
+**关键接口：**
+- `GET /health` - 健康检查
+- `GET /v1/models` - 返回当前默认模型列表
+- `POST /v1/chat/completions` - OpenAI Chat Completions 兼容接口
+
+**设计：**
+- 复用现有 `Agent` / `Provider` / `ToolRegistry` 逻辑
+- 请求中最后一条 user 消息作为本轮输入
+- 保留 OpenAI 兼容响应字段（`id` / `choices` / `usage`）
 
 ## 数据流
 
@@ -168,6 +183,24 @@ User Input
     └→ 返回最终响应
     ↓
 Output Response
+```
+
+### API 调用流程
+
+```
+External Client
+    ↓
+[FastAPI] /v1/chat/completions
+    ↓
+[Config] 加载配置
+    ↓
+[Provider Factory] 创建 provider
+    ↓
+[ToolRegistry] 初始化内置工具
+    ↓
+[Agent.run] 执行主循环
+    ↓
+OpenAI-compatible JSON Response
 ```
 
 ### Provider 交互
@@ -266,8 +299,9 @@ agent = Agent(
 1. **暂未支持的功能：**
    - Channel 系统（仅 CLI）
    - Cron 任务调度
-   - 流式输出
+    - API 流式输出（`stream=true`）
    - 提示缓存
+    - API 请求体直接注入自定义 tools
 
 2. **未来改进：**
    - 支持工具的并发执行

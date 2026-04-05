@@ -10,6 +10,7 @@ Minimal agent system for Python 3.12, optimized for simplicity and extensibility
 - **Configuration**: Pydantic-based config with environment variable support
 - **Workspace Management**: Organized workspace with skills, memories, sessions
 - **CLI**: Basic command-line interface
+- **OpenAI-Compatible API**: External tools can call agent via `/v1/chat/completions`
 
 ## Quick Start
 
@@ -45,6 +46,23 @@ Edit `~/.agent-lab/config.json`:
 agent-lab chat "What's in the current directory?"
 ```
 
+### Start OpenAI-compatible API server
+
+```bash
+agent-lab api --host 127.0.0.1 --port 8000
+```
+
+Then call it like OpenAI API:
+
+```bash
+curl http://127.0.0.1:8000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gpt-4o",
+    "messages": [{"role": "user", "content": "hello"}]
+  }'
+```
+
 ## Architecture
 
 ```
@@ -53,6 +71,7 @@ agent-lab/
 ├── providers/        # LLM providers (base, OpenAI, Anthropic)
 ├── tools/           # Tool system (base, registry, built-ins)
 ├── agent/           # Agent main loop
+├── api/             # OpenAI-compatible HTTP API server
 ├── workspace/       # Workspace management
 ├── skills/          # Skills loader
 └── cli.py           # CLI entry point
