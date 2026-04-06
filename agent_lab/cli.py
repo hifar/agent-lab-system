@@ -88,6 +88,7 @@ def config(
         table.add_row("temperature", str(cfg.agents.defaults.temperature))
         table.add_row("enable_think_mode", str(cfg.agents.defaults.enable_think_mode))
         table.add_row("enable_streaming_mode", str(cfg.agents.defaults.enable_streaming_mode))
+        table.add_row("log", str(cfg.log))
         console.print(table)
         console.print(f"\nConfig file: {config_path}")
     else:
@@ -165,6 +166,7 @@ def chat(
         temperature=cfg.agents.defaults.temperature,
         enable_think_mode=cfg.agents.defaults.enable_think_mode,
         enable_streaming_mode=cfg.agents.defaults.enable_streaming_mode,
+        enable_log=cfg.log,
     )
 
     async def run_chat():

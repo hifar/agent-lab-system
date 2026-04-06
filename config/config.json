@@ -1,4 +1,5 @@
 {
+  "log": true,
   "agents": {
     "defaults": {
       "model": "qwen3.5-flash",

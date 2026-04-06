@@ -7,6 +7,7 @@ class Workspace:
     """Manages agent workspace."""
 
     SUBDIRS = [
+        "log",
         "skills",
         "knowledge",
         "memories",
@@ -31,6 +32,11 @@ class Workspace:
     def skills_dir(self) -> Path:
         """Get skills directory."""
         return self.path / "skills"
+
+    @property
+    def log_dir(self) -> Path:
+        """Get log directory."""
+        return self.path / "log"
 
     @property
     def memories_dir(self) -> Path:

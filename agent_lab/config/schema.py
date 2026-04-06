@@ -60,6 +60,7 @@ class ToolsConfig(Base):
 class Config(BaseSettings):
     """Root configuration."""
 
+    log: bool = False
     agents: AgentsConfig = Field(default_factory=AgentsConfig)
     providers: ProvidersConfig = Field(default_factory=ProvidersConfig)
     tools: ToolsConfig = Field(default_factory=ToolsConfig)

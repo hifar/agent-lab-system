@@ -1,6 +1,7 @@
 """Agent main loop and execution logic."""
 
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -24,6 +25,7 @@ class Agent:
         temperature: float = 0.7,
         enable_think_mode: bool = False,
         enable_streaming_mode: bool = False,
+        enable_log: bool = False,
         system_prompt: str | None = None,
     ) -> None:
         """Initialize agent."""
@@ -36,7 +38,86 @@ class Agent:
         self.temperature = temperature
         self.enable_think_mode = enable_think_mode
         self.enable_streaming_mode = enable_streaming_mode
+        self.enable_log = enable_log
+        self.log_dir = self.workspace / "log"
         self._system_prompt = system_prompt
+
+    def _serialize_response(self, response: Any) -> dict[str, Any]:
+        """Convert provider response into JSON-serializable structure."""
+        tool_calls = []
+        for tc in response.tool_calls:
+            tool_calls.append({
+                "id": tc.id,
+                "name": tc.name,
+                "arguments": tc.arguments,
+            })
+
+        return {
+            "content": response.content,
+            "finish_reason": response.finish_reason,
+            "usage": response.usage,
+            "tool_calls": tool_calls,
+        }
+
+    def _log_llm_interaction(
+        self,
+        *,
+        iteration: int,
+        request_payload: dict[str, Any],
+        response_payload: dict[str, Any],
+    ) -> None:
+        """Append one LLM interaction record to workspace log file."""
+        if not self.enable_log:
+            return
+
+        self.log_dir.mkdir(parents=True, exist_ok=True)
+        ts = datetime.now(timezone.utc)
+        day = ts.strftime('%Y%m%d')
+        jsonl_file = self.log_dir / f"llm-interactions-{day}.jsonl"
+        readable_file = self.log_dir / f"llm-interactions-{day}.log"
+
+        provider_name = self.provider.__class__.__name__
+        base_url = self.provider.api_base or "<default>"
+
+        record = {
+            "timestamp": ts.isoformat(),
+            "iteration": iteration,
+            "request_type": "llm_request",
+            "response_type": "llm_response",
+            "provider": provider_name,
+            "base_url": base_url,
+            "model": self.model,
+            "request": request_payload,
+            "response": response_payload,
+        }
+
+        try:
+            with open(jsonl_file, "a", encoding="utf-8") as f:
+                f.write(json.dumps(record, ensure_ascii=False, default=str) + "\n")
+
+            separator = "=" * 88
+            request_line = (
+                f"[REQUEST ] ts={ts.isoformat()} | iteration={iteration} | provider={provider_name} "
+                f"| model={self.model} | base_url={base_url}"
+            )
+            response_line = (
+                f"[RESPONSE] ts={ts.isoformat()} | iteration={iteration} | provider={provider_name} "
+                f"| model={self.model} | base_url={base_url}"
+            )
+
+            with open(readable_file, "a", encoding="utf-8") as f:
+                f.write(separator + "\n")
+                f.write(request_line + "\n")
+                f.write("-" * 88 + "\n")
+                f.write(json.dumps(request_payload, ensure_ascii=False, indent=2, default=str) + "\n")
+                f.write("\n")
+                f.write(response_line + "\n")
+                f.write("-" * 88 + "\n")
+                f.write(json.dumps(response_payload, ensure_ascii=False, indent=2, default=str) + "\n")
+                f.write(separator + "\n\n")
+        except OSError:
+            # Logging must never break the agent main flow.
+            return
 
     def _build_system_prompt(self) -> str:
         """Build system prompt for the agent."""
@@ -212,6 +293,12 @@ Be concise and direct in your responses.
                 )
             else:
                 response = await self.provider.chat(**chat_kwargs)
+
+            self._log_llm_interaction(
+                iteration=iteration,
+                request_payload=chat_kwargs,
+                response_payload=self._serialize_response(response),
+            )
 
             # Add assistant response to messages
             assistant_msg: dict[str, Any] = {

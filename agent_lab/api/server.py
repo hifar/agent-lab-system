@@ -161,6 +161,7 @@ def create_app(config_path: str | None = None) -> FastAPI:
             temperature=cfg.agents.defaults.temperature,
             enable_think_mode=cfg.agents.defaults.enable_think_mode,
             enable_streaming_mode=cfg.agents.defaults.enable_streaming_mode,
+            enable_log=cfg.log,
         )
 
         try:
