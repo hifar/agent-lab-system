@@ -92,7 +92,34 @@ agent-lab chat --streaming "给我一个 Python 示例"
 
 # 启动 OpenAI 兼容 API 服务
 agent-lab api --host 127.0.0.1 --port 8000
+
+# 启动 memory 后台服务（持续运行）
+agent-lab service start
+
+# 仅执行一次待处理 memory 任务
+agent-lab service once
+
+# 前台运行 memory 服务（便于观察日志）
+agent-lab service run
+
+# 停止后台 memory 服务
+agent-lab service stop
 ```
+
+### 4.1 记忆系统说明（2026-04-07）
+
+- 三层记忆：
+  - 长期：`agent_identity.md`、`user.md`、`long_term.md`
+  - 短期：`short_term.md`
+  - 上下文窗口：最近 4 组对话
+- 聊天时仅保留最近 4 组对话给主模型，历史部分进入后台整理任务。
+- 记忆文件采用“合并重写”策略，不做简单追加。
+- 默认包含安全解析兜底：若 memory 模型返回非标准 JSON，不会导致任务失败。
+
+### 4.2 日志说明
+
+- 开启 `config.json` 根字段 `log: true` 后，所有 LLM 请求/响应都会写入工作区 `log/`。
+- 日志包含：时间戳、请求类型、provider、model、base_url、payload。
 
 ### 5. 通过 OpenAI 协议调用 Agent
 
@@ -123,6 +150,7 @@ curl http://127.0.0.1:8000/v1/chat/completions \
 - CLI `--streaming` 已支持增量显示（OpenAI 兼容与 Anthropic provider）
 - API 的 `streaming_mode` / `stream` 目前仍返回非流式一次性 JSON
 - 暂不支持请求体传入 `tools`（使用本地已配置内置工具）
+- API/CLI 仅负责触发 memory 整理任务，具体整理由 `agent-lab service` 执行
 
 ## 架构概览
 

@@ -16,6 +16,8 @@ agent-lab-system/
 │   ├── cli.py                 # CLI 入口点
 │   ├── context.py             # 上下文构建
 │   ├── session.py             # 会话管理
+│   ├── memory/                # 记忆管理模块
+│   │   └── __init__.py        # MemoryManager / MemoryTask
 │   │
 │   ├── api/                   # OpenAI 兼容 API
 │   │   ├── __init__.py
@@ -164,6 +166,15 @@ async def run(
 | `tools-list` | 列出工具 |
 | `skills-list` | 列出技能 |
 | `api` | 启动 OpenAI 兼容 API 服务 |
+| `service` | 管理 memory 后台服务（run/once/start/stop） |
+
+### 11. Memory 系统 (`agent_lab/memory/`)
+
+| 文件 | 类/函数 | 职责 |
+|------|---------|------|
+| `__init__.py` | `MemoryManager` | 三层记忆读取、构建上下文、排队与处理任务 |
+| `__init__.py` | `MemoryTask` | 记忆整理任务结构 |
+| `__init__.py` | `stop_service_by_pid` | 关闭后台 memory 服务 |
 
 ### 10. API 服务 (`agent_lab/api/`)
 
@@ -198,6 +209,11 @@ FastAPI API
 │   ├── Provider (Factory.create_provider)
 │   └── ToolRegistry
 └── OpenAI-compatible HTTP response
+
+Memory Service
+├── enqueue from Agent/API
+├── process queue in background
+└── rewrite memory files by merge policy
 ```
 
 ## 配置文件格式
@@ -249,18 +265,26 @@ FastAPI API
 ~/.agent-lab/
 ├── config.json                    # 全局配置
 └── workspace/
-  ├── prompts/                   # 系统提示词
-  ├── identity/                  # Agent 标识
-  ├── profile/                   # 用户画像
-    ├── skills/                    # 技能库（用户可添加）
+    ├── prompts/                  # 系统提示词
+    ├── identity/                 # Agent 标识
+    ├── profile/                  # 用户画像
+    ├── skills/                   # 技能库（用户可添加）
     │   ├── skill1/
     │   │   └── SKILL.md
     │   └── skill2/
     │       └── SKILL.md
-    ├── memories/                  # 记忆存储（预留）
-  ├── state/                     # 运行状态与策略
-    └── sessions/                  # 对话历史
-        ├── default.json           # 默认会话
+    ├── memories/                 # 三层记忆文件
+    │   ├── agent_identity.md
+    │   ├── user.md
+    │   ├── long_term.md
+    │   └── short_term.md
+    ├── state/                    # 运行状态与 memory 队列
+    │   ├── memory_tasks/
+    │   ├── memory_tasks_done/
+    │   └── memory_tasks_failed/
+    ├── log/                      # LLM 交互日志
+    └── sessions/                 # 对话历史
+        ├── default.json
         └── other-session.json
 ```
 
@@ -314,7 +338,8 @@ FastAPI API
 3. 创建 Provider（基于配置）
 4. 初始化 ToolRegistry
 5. 创建 Agent 实例
-6. 执行用户请求
+6. 执行用户请求并 enqueue memory 任务
+7. 由 `agent-lab service` 后台处理 memory 压缩与分层写回
 
 ### 会话阶段
 1. 加载会话历史（如存在）

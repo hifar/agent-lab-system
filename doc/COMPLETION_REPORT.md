@@ -20,6 +20,23 @@
   - `skills/*/SKILL.md`
 - 新增示例配置与工作区模板：`config/config.json`、`config/agent.md`、`config/workspace/*`。
 
+## 🔄 增量更新（2026-04-07）
+
+- 新增 `agent_lab/memory/__init__.py`：
+  - 三层记忆管理（长期/短期/最近 4 组对话）
+  - memory 任务队列与后台处理
+  - 记忆上下文拼装并注入 system prompt
+- 新增 CLI `service` 命令：`run`、`once`、`start`、`stop`。
+- Agent 调整为“主链路不阻塞”：
+  - 对话时只保留最近 4 组对话
+  - 历史对话异步 enqueue 到 memory service
+- 记忆文件更新策略从“追加”改为“合并重写”：
+  - `short_term.md` 始终更新
+  - `user.md` / `agent_identity.md` 仅在相关新增时更新
+  - `long_term.md` 仅在重要长期信息出现时更新
+- 增强 memory LLM 输出解析健壮性：支持 fenced JSON 与异常格式兜底，避免任务失败。
+- 全部 LLM 调用（含 memory service）统一写入 `workspace/log/`。
+
 ## ✅ 完成清单
 
 ### 核心功能模块

@@ -1,6 +1,8 @@
 """Command-line interface for agent-lab."""
 
 import asyncio
+import subprocess
+import sys
 from pathlib import Path
 
 import typer
@@ -11,6 +13,7 @@ from rich.table import Table
 from agent_lab import __logo__, __version__
 from agent_lab.agent import Agent
 from agent_lab.config import Config, load_config, save_config, get_default_config_path
+from agent_lab.memory import MemoryManager, stop_service_by_pid
 from agent_lab.providers import create_provider
 from agent_lab.session import Session
 from agent_lab.tools import ReadFileTool, WriteFileTool, ListDirTool, ToolRegistry
@@ -308,6 +311,91 @@ def run_api(
     app_instance = create_app(config_path=config_path)
     console.print(f"[green]Starting API server on http://{host}:{port}[/green]")
     uvicorn.run(app_instance, host=host, port=port)
+
+
+@app.command()
+def service(
+    action: str = typer.Argument("run", help="Action: run|once|start|stop"),
+    model: str | None = typer.Option(None, "--model", "-m", help="Model override"),
+    interval: float = typer.Option(2.0, "--interval", help="Polling interval seconds"),
+    config_path: str | None = typer.Option(None, "--config", help="Path to config file"),
+) -> None:
+    """Run memory service worker for background memory organization/compression."""
+    cfg_path = Path(config_path).expanduser() if config_path else get_default_config_path()
+    if not cfg_path.exists():
+        console.print("[red]✗ Configuration not found.[/red]")
+        console.print("Run 'agent-lab init' first.")
+        raise typer.Exit(1)
+
+    cfg = load_config(cfg_path)
+    workspace_path = cfg.workspace_path
+    workspace_path.mkdir(parents=True, exist_ok=True)
+
+    pid_file = workspace_path / "state" / "memory_service.pid"
+    pid_file.parent.mkdir(parents=True, exist_ok=True)
+
+    if action == "stop":
+        if stop_service_by_pid(pid_file):
+            console.print("[green]✓ Memory service stopped.[/green]")
+        else:
+            console.print("[yellow]Memory service not running or stop failed.[/yellow]")
+        return
+
+    if action == "start":
+        cmd = [
+            sys.executable,
+            "-m",
+            "agent_lab.cli",
+            "service",
+            "run",
+            "--interval",
+            str(interval),
+        ]
+        if model:
+            cmd.extend(["--model", model])
+        if config_path:
+            cmd.extend(["--config", config_path])
+
+        creationflags = 0
+        if hasattr(subprocess, "DETACHED_PROCESS"):
+            creationflags |= subprocess.DETACHED_PROCESS  # type: ignore[attr-defined]
+        if hasattr(subprocess, "CREATE_NEW_PROCESS_GROUP"):
+            creationflags |= subprocess.CREATE_NEW_PROCESS_GROUP  # type: ignore[attr-defined]
+
+        proc = subprocess.Popen(  # noqa: S603
+            cmd,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            creationflags=creationflags,
+            close_fds=True,
+        )
+        pid_file.write_text(str(proc.pid), encoding="utf-8")
+        console.print(f"[green]✓ Memory service started in background (pid={proc.pid}).[/green]")
+        console.print(f"PID file: {pid_file}")
+        return
+
+    provider = create_provider(cfg, model)
+    manager = MemoryManager(workspace=workspace_path, enable_log=cfg.log)
+    run_once = action == "once"
+
+    async def run_worker() -> None:
+        await manager.process_pending_tasks(
+            provider=provider,
+            default_model=model or cfg.agents.defaults.model,
+            once=run_once,
+            poll_interval_seconds=interval,
+        )
+
+    if action == "once":
+        console.print("[cyan]Running memory service once...[/cyan]")
+    elif action == "run":
+        console.print("[cyan]Running memory service loop...[/cyan]")
+    else:
+        console.print(f"[red]Unknown action: {action}[/red]")
+        raise typer.Exit(1)
+
+    asyncio.run(run_worker())
 
 
 def main() -> None:

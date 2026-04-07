@@ -1,8 +1,34 @@
 # 📋 Agent-Lab 系统实现报告
 
-**完成日期**: 2026-04-05  
+**完成日期**: 2026-04-07  
 **系统状态**: ✅ **M1-M5 全部完成，可用**  
 **代码质量**: ✅ 精简优雅，符合 Python 规范
+
+## 🔄 增量交付（2026-04-07）
+
+### Memory 与后台服务
+
+- 新增 `memory` 模块，支持记忆整理、抽取长期记忆、压缩短期记忆、读取记忆上下文。
+- 新增 CLI `service` 命令：
+    - `agent-lab service run`
+    - `agent-lab service once`
+    - `agent-lab service start`
+    - `agent-lab service stop`
+- 对话流程改为异步记忆整理：主对话不阻塞，后台 service 处理 memory 队列。
+
+### 记忆策略与稳定性
+
+- 三层记忆落地：
+    - 长期：`agent_identity.md`、`user.md`、`long_term.md`
+    - 短期：`short_term.md`
+    - 运行窗口：最近 4 组对话
+- 记忆写回策略改为“合并重写”而非追加。
+- 增强 memory 输出解析：支持 fenced JSON 与回退策略，减少任务失败。
+
+### 日志
+
+- 所有 LLM 请求/响应（含 memory service）写入 `workspace/log/`。
+- 日志形态：结构化 JSONL + 可读文本日志。
 
 ## 🔄 增量交付（2026-04-05）
 

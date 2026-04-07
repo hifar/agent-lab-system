@@ -1,5 +1,13 @@
 # 架构文档
 
+## 增量更新（2026-04-07）
+
+- 新增 `memory/` 模块，统一管理三层记忆：长期记忆、短期记忆、最近 4 组对话。
+- 新增后台 memory service（CLI `service` 命令）用于异步整理与压缩记忆，不阻塞聊天主链路。
+- 记忆更新策略改为“合并重写”而非追加：`user.md`、`agent_identity.md`、`long_term.md`、`short_term.md` 按规则覆盖写回。
+- 记忆组织 LLM 输出解析增强：支持 fenced JSON（```json ... ```）与非标准文本提取，异常场景自动安全回退。
+- 新增全链路 LLM 请求/响应日志写入 `workspace/log/`（JSONL + 可读日志）。
+
 ## 系统设计
 
 agent-lab 是一个精简的 Agent 系统，设计理念是"先可用、再增强"。
@@ -166,6 +174,26 @@ class MyTool(Tool):
 - 请求中最后一条 user 消息作为本轮输入
 - 保留 OpenAI 兼容响应字段（`id` / `choices` / `usage`）
 - 支持行为参数：`think_mode`、`streaming_mode`（兼容 `stream`）
+
+#### 11. Memory 系统（`memory/`）
+
+**职责：** 记忆分层、压缩、后台整理、上下文注入
+
+**关键类：**
+- `MemoryManager` - 记忆文件管理与任务队列处理
+- `MemoryTask` - 记忆整理任务载荷
+
+**核心设计：**
+- 三层记忆：
+    - 长期层：`memories/agent_identity.md`、`memories/user.md`、`memories/long_term.md`
+    - 短期层：`memories/short_term.md`
+    - 运行层：最近 4 组对话（运行时窗口，不持久化为独立文件）
+- 后台队列目录：`state/memory_tasks/`、`state/memory_tasks_done/`、`state/memory_tasks_failed/`
+- 聊天主链路只负责 enqueue，整理逻辑在 service 或 `service once` 中异步处理
+- 写回策略：
+    - `short_term.md` 始终按“合并后完整内容”重写
+    - `user.md` / `agent_identity.md` 仅在模型判断有相关新增时更新
+    - `long_term.md` 仅在“重要且长期稳定”信息出现时更新
 
 ## 数据流
 

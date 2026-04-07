@@ -4,6 +4,14 @@ Minimal agent system for Python 3.12, optimized for simplicity and extensibility
 
 **Status**: ✅ Production Ready (MVP) | [See Complete Summary](FINAL_SUMMARY.md)
 
+## Recent Updates (2026-04-07)
+
+- Added dedicated memory module for layered memory management and background organization.
+- Added CLI service command for memory worker lifecycle: `run`, `once`, `start`, `stop`.
+- Added 3-layer memory policy with merge-rewrite updates (not append).
+- Added robust memory output parsing (supports fenced JSON and safe fallback).
+- Added full LLM request/response logging (including memory service) into workspace `log/`.
+
 ## Recent Updates (2026-04-05)
 
 - Added OpenAI-compatible API server and CLI command `agent-lab api`.
@@ -95,6 +103,8 @@ agent-lab chat "message"          # Single chat
 agent-lab chat -s session_id      # Multi-turn chat
 agent-lab tools-list              # List tools
 agent-lab skills-list             # List skills
+agent-lab service once            # Process memory tasks once
+agent-lab service start           # Start memory service in background
 ```
 
 ## Environment Variables

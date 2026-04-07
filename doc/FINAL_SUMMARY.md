@@ -1,8 +1,20 @@
 # 🎉 Agent-Lab 系统 - 最终交付总结
 
-**完成日期**: 2026-04-05  
+**完成日期**: 2026-04-07  
 **Python 版本**: 3.12  
 **项目状态**: ✅ **生产就绪（MVP）**
+
+## 🔄 增量更新（2026-04-07）
+
+1. 新增完整 `memory` 模块：三层记忆管理、任务入队、后台处理、上下文构建。
+2. 新增 CLI `service` 命令：`run | once | start | stop`，用于后台 memory 整理与压缩。
+3. Agent 运行时上下文窗口固定为最近 4 组对话，历史对话异步进入 memory 队列处理。
+4. 记忆写回改为“合并重写”策略：
+    - `short_term.md` 始终重写
+    - `user.md`、`agent_identity.md` 仅在相关新增时更新
+    - `long_term.md` 仅写入重要且长期稳定信息
+5. 全链路 LLM 日志落盘到 `workspace/log/`（request/response，JSONL + 可读文本）。
+6. 修复 memory 组织阶段的解析健壮性：支持 fenced JSON 与异常输出安全回退，避免任务误入 failed 队列。
 
 ## 🔄 增量更新（2026-04-05）
 
