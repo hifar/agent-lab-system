@@ -45,6 +45,7 @@ class MemoryManager:
         self.tasks_dir = self.state_dir / "memory_tasks"
         self.done_dir = self.state_dir / "memory_tasks_done"
         self.failed_dir = self.state_dir / "memory_tasks_failed"
+        self.memory_prompt_file = Path(__file__).resolve().parents[2] / "config" / "memory_organizer_prompt.md"
 
         self.ensure_structure()
 
@@ -196,6 +197,32 @@ class MemoryManager:
         content = f"{title}\n\n{normalized}\n" if normalized else f"{title}\n"
         path.write_text(content, encoding="utf-8")
 
+    def _load_memory_organizer_prompt(self) -> str:
+        """Load memory organizer prompt from config file with safe fallback."""
+        default_prompt = (
+            "你是记忆整理器。请基于【现有记忆】和【历史对话】输出 JSON，且只输出 JSON。"
+            "\n必须包含以下键:"
+            "\nshort_term_merged: string"
+            "\nshould_update_user: boolean"
+            "\nuser_merged: string"
+            "\nshould_update_agent_identity: boolean"
+            "\nagent_identity_merged: string"
+            "\nshould_update_long_term: boolean"
+            "\nlong_term_merged: string"
+            "\n规则:"
+            "\n1) short_term_merged 需要把现有 short_term 与本次新增信息合并压缩，简洁可复用。"
+            "\n2) 如果历史对话未涉及用户偏好/背景，不要更新 user（should_update_user=false）。"
+            "\n3) 如果历史对话未涉及 agent 自身信息/边界，不要更新 agent_identity（should_update_agent_identity=false）。"
+            "\n4) 只有重要且长期稳定的信息才允许进入 long_term（should_update_long_term=true），否则为 false。"
+            "\n5) merged 字段应表示“合并后的完整内容”，用于覆盖写回，不是增量追加。"
+        )
+
+        try:
+            text = self.memory_prompt_file.read_text(encoding="utf-8").strip()
+            return text or default_prompt
+        except OSError:
+            return default_prompt
+
     def _provider_meta(self, provider: LLMProvider, model: str) -> dict[str, Any]:
         base_url = None
         client = getattr(provider, "client", None)
@@ -329,23 +356,7 @@ class MemoryManager:
         current_long_term = self._read_memory_body(self.long_term_file)
         current_short_term = self._read_memory_body(self.short_term_file)
 
-        prompt = (
-            "你是记忆整理器。请基于【现有记忆】和【历史对话】输出 JSON，且只输出 JSON。"
-            "\n必须包含以下键:"
-            "\nshort_term_merged: string"
-            "\nshould_update_user: boolean"
-            "\nuser_merged: string"
-            "\nshould_update_agent_identity: boolean"
-            "\nagent_identity_merged: string"
-            "\nshould_update_long_term: boolean"
-            "\nlong_term_merged: string"
-            "\n规则:"
-            "\n1) short_term_merged 需要把现有 short_term 与本次新增信息合并压缩，简洁可复用。"
-            "\n2) 如果历史对话未涉及用户偏好/背景，不要更新 user（should_update_user=false）。"
-            "\n3) 如果历史对话未涉及 agent 自身信息/边界，不要更新 agent_identity（should_update_agent_identity=false）。"
-            "\n4) 只有重要且长期稳定的信息才允许进入 long_term（should_update_long_term=true），否则为 false。"
-            "\n5) merged 字段应表示“合并后的完整内容”，用于覆盖写回，不是增量追加。"
-        )
+        prompt = self._load_memory_organizer_prompt()
 
         messages = [
             {
