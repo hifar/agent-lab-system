@@ -4,6 +4,14 @@
 **Python 版本**: 3.12  
 **项目状态**: ✅ **生产就绪（MVP）**
 
+## 🔄 增量更新（2026-04-11）
+
+1. 新增多 workspace 能力：`agent-lab chat -w/--workspace` 支持单次会话覆盖 workspace。
+2. `init -w` + `chat -w` 形成完整路径策略：显式指定优先，未指定沿用 `~/.agent-lab/workspace` 默认配置。
+3. 记忆整理提示词抽离到 `config/memory_organizer_prompt.md`，可独立维护和调优。
+4. 记忆整理策略升级为“相关即更新”，减少过度保守带来的记忆遗漏。
+5. 新增 system prompt 注入顺序文档：`doc/SYSTEM_PROMPT_INJECTION.md`。
+
 ## 🔄 增量更新（2026-04-07）
 
 1. 新增完整 `memory` 模块：三层记忆管理、任务入队、后台处理、上下文构建。

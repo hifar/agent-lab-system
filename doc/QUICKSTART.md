@@ -19,6 +19,12 @@ agent-lab init
 - `~/.agent-lab/config.json` - 配置文件
 - `~/.agent-lab/workspace/` - 工作目录及其子文件夹
 
+可选：初始化到指定 workspace（并写入配置默认 workspace）
+
+```bash
+agent-lab init -w "d:/workspace/ws01"
+```
+
 ### 3. 配置 API 密钥
 
 编辑 `~/.agent-lab/config.json`：
@@ -78,6 +84,9 @@ agent-lab chat "What's in the current directory?"
 # 交互式聊天（多轮对话）
 agent-lab chat
 
+# 使用指定 workspace（不修改全局配置）
+agent-lab chat -w "d:/workspace/ws01" "你好"
+
 # 使用特定模型
 agent-lab chat -m "gpt-4-turbo" "Your message here"
 
@@ -115,6 +124,12 @@ agent-lab service stop
 - 聊天时仅保留最近 4 组对话给主模型，历史部分进入后台整理任务。
 - 记忆文件采用“合并重写”策略，不做简单追加。
 - 默认包含安全解析兜底：若 memory 模型返回非标准 JSON，不会导致任务失败。
+
+### 4.1.1 记忆整理提示词配置
+
+- 记忆整理提示词已抽离到：`config/memory_organizer_prompt.md`
+- 可直接修改该文件，调整“长期记忆判断、用户/agent 信息判断、短期压缩策略”。
+- 若文件缺失，系统会回退到内置默认提示词。
 
 ### 4.2 日志说明
 
@@ -256,6 +271,10 @@ class MyProvider(LLMProvider):
 - `OPENAI_API_KEY` - OpenAI API 密钥
 - `ANTHROPIC_API_KEY` - Anthropic API 密钥
 - `AGENT_LAB_WORKSPACE` - 覆盖工作区路径
+
+## 参考文档
+
+- `doc/SYSTEM_PROMPT_INJECTION.md` - 说明 system prompt 的注入内容与顺序
 
 ## 故障排除
 

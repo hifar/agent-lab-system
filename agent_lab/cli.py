@@ -102,6 +102,12 @@ def config(
 def chat(
     message: str | None = typer.Argument(None, help="Message to send (interactive if empty)"),
     model: str | None = typer.Option(None, "--model", "-m", help="Model override"),
+    workspace: str | None = typer.Option(
+        None,
+        "--workspace",
+        "-w",
+        help="Workspace override (does not modify config)",
+    ),
     session: str = typer.Option("default", "--session", "-s", help="Session ID"),
     clear: bool = typer.Option(False, "--clear", help="Clear session history"),
     think: bool | None = typer.Option(None, "--think/--no-think", help="Enable think mode"),
@@ -134,7 +140,7 @@ def chat(
         raise typer.Exit(1)
 
     # Setup workspace and tools
-    workspace_path = cfg.workspace_path
+    workspace_path = Path(workspace).expanduser() if workspace else cfg.workspace_path
     workspace_path.mkdir(parents=True, exist_ok=True)
 
     # Create provider

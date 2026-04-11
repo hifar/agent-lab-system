@@ -4,6 +4,13 @@ Minimal agent system for Python 3.12, optimized for simplicity and extensibility
 
 **Status**: ✅ Production Ready (MVP) | [See Complete Summary](FINAL_SUMMARY.md)
 
+## Recent Updates (2026-04-11)
+
+- Added multi-workspace override in chat command: `agent-lab chat -w "d:/workspace/ws01"`.
+- Kept default workspace behavior unchanged when `-w` is omitted (`~/.agent-lab/workspace` by config default).
+- Extracted memory organizer prompt into `config/memory_organizer_prompt.md`.
+- Added dedicated documentation for system prompt injection order: `doc/SYSTEM_PROMPT_INJECTION.md`.
+
 ## Recent Updates (2026-04-07)
 
 - Added dedicated memory module for layered memory management and background organization.
@@ -25,6 +32,7 @@ Minimal agent system for Python 3.12, optimized for simplicity and extensibility
 - 📖 [Architecture](ARCHITECTURE.md) - System design and concepts
 - 📋 [Structure](PROJECT_STRUCTURE.md) - Complete file reference
 - ✅ [Final Summary](FINAL_SUMMARY.md) - Complete project overview
+- 🧠 [System Prompt Injection](SYSTEM_PROMPT_INJECTION.md) - Injection sources and order
 
 ## Features
 
@@ -100,6 +108,7 @@ agent-lab/
 agent-lab init                    # Initialize
 agent-lab config show             # Show configuration
 agent-lab chat "message"          # Single chat
+agent-lab chat -w "d:/workspace/ws01" "message"  # One-off workspace override
 agent-lab chat -s session_id      # Multi-turn chat
 agent-lab tools-list              # List tools
 agent-lab skills-list             # List skills

@@ -8,6 +8,13 @@
 - 记忆组织 LLM 输出解析增强：支持 fenced JSON（```json ... ```）与非标准文本提取，异常场景自动安全回退。
 - 新增全链路 LLM 请求/响应日志写入 `workspace/log/`（JSONL + 可读日志）。
 
+## 增量更新（2026-04-11）
+
+- CLI 新增多 workspace 支持：`chat -w/--workspace` 可在单次会话覆盖 workspace 路径。
+- `init -w` 与 `chat -w` 都支持显式指定路径，未指定时仍使用 `~/.agent-lab/workspace`（配置默认）。
+- 记忆整理提示词抽离到 `config/memory_organizer_prompt.md`，支持直接配置与热调整。
+- 新增文档 `doc/SYSTEM_PROMPT_INJECTION.md`，明确 system prompt 注入内容与顺序。
+
 ## 系统设计
 
 agent-lab 是一个精简的 Agent 系统，设计理念是"先可用、再增强"。
@@ -156,6 +163,7 @@ class MyTool(Tool):
 - `init` - 初始化
 - `config` - 配置管理
 - `chat` - 聊天（单轮或多轮）
+- `chat -w` - 指定本次会话 workspace（不修改全局配置）
 - `tools-list` - 列出工具
 - `skills-list` - 列出技能
 - `api` - 启动 OpenAI 兼容 HTTP API

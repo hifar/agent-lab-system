@@ -9,6 +9,7 @@ agent-lab-system/
 ├── README.md                   # 项目主文档
 ├── QUICKSTART.md              # 快速开始指南
 ├── ARCHITECTURE.md            # 架构文档
+├── config/memory_organizer_prompt.md # 记忆整理提示词（可配置）
 ├── verify.py                  # 快速验证脚本
 │
 ├── agent_lab/                 # 主包
@@ -163,6 +164,7 @@ async def run(
 | `init` | 初始化工作区 |
 | `config` | 显示配置 |
 | `chat` | 与 Agent 聊天 |
+| `chat -w` | 指定本次会话 workspace 路径 |
 | `tools-list` | 列出工具 |
 | `skills-list` | 列出技能 |
 | `api` | 启动 OpenAI 兼容 API 服务 |
@@ -175,6 +177,12 @@ async def run(
 | `__init__.py` | `MemoryManager` | 三层记忆读取、构建上下文、排队与处理任务 |
 | `__init__.py` | `MemoryTask` | 记忆整理任务结构 |
 | `__init__.py` | `stop_service_by_pid` | 关闭后台 memory 服务 |
+
+### 12. 记忆提示词配置 (`config/memory_organizer_prompt.md`)
+
+| 文件 | 职责 |
+|------|------|
+| `memory_organizer_prompt.md` | 配置记忆整理/长期判断/用户与 agent 信息判断/短期压缩策略提示词 |
 
 ### 10. API 服务 (`agent_lab/api/`)
 
