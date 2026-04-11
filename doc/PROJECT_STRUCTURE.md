@@ -125,11 +125,12 @@ class ToolRegistry:
 async def run(
     message: str,
     history: list[dict] | None = None,
-  max_tokens: int | None = None,
-  temperature: float | None = None,
-  tool_choice: str | dict | None = None,
-  enable_think_mode: bool | None = None,
-  enable_streaming_mode: bool | None = None,
+    max_tokens: int | None = None,
+    temperature: float | None = None,
+    tool_choice: str | dict | None = None,
+    enable_think_mode: bool | None = None,
+    enable_streaming_mode: bool | None = None,
+    session_id: str = "default",  # NEW: session identifier for memory context
 ) -> tuple[str, list[dict]]
 ```
 
@@ -174,9 +175,9 @@ async def run(
 
 | 文件 | 类/函数 | 职责 |
 |------|---------|------|
-| `__init__.py` | `MemoryManager` | 三层记忆读取、构建上下文、排队与处理任务 |
-| `__init__.py` | `MemoryTask` | 记忆整理任务结构 |
-| `__init__.py` | `stop_service_by_pid` | 关闭后台 memory 服务 |
+| `__init__.py` | `MemoryManager` | 四层记忆管理、session-local short_term、任务队列、后台处理 |
+| `__init__.py` | `MemoryTask` | 记忆整理任务结构（包含session_id） |
+| `__init__.py` | `_register_workspace()` | 注册workspace到全局registry供service发现 |
 
 ### 12. 记忆提示词配置 (`config/memory_organizer_prompt.md`)
 
@@ -272,6 +273,9 @@ Memory Service
 ```
 ~/.agent-lab/
 ├── config.json                    # 全局配置
+├── state/                         # 全局状态
+│   └── memory_workspaces.json     # 注册的workspace供service发现
+│
 └── workspace/
     ├── prompts/                  # 系统提示词
     ├── identity/                 # Agent 标识
@@ -281,20 +285,28 @@ Memory Service
     │   │   └── SKILL.md
     │   └── skill2/
     │       └── SKILL.md
-    ├── memories/                 # 三层记忆文件
-    │   ├── agent_identity.md
-    │   ├── user.md
-    │   ├── long_term.md
-    │   └── short_term.md
+    ├── memories/                 # 四层记忆文件
+    │   ├── agent_identity.md              # 跨session共享
+    │   ├── user.md                        # 跨session共享
+    │   ├── long_term.md                   # 跨session共享
+    │   └── short_term/                    # 目录：session-local隔离
+    │       ├── short_term_default.md
+    │       ├── short_term_session_1.md
+    │       └── short_term_{session_id}.md
     ├── state/                    # 运行状态与 memory 队列
-    │   ├── memory_tasks/
-    │   ├── memory_tasks_done/
-    │   └── memory_tasks_failed/
+    │   ├── memory_tasks/        # 待处理记忆任务
+    │   ├── memory_tasks_done/   # 已完成任务存档
+    │   └── memory_tasks_failed/ # 失败任务存档
     ├── log/                      # LLM 交互日志
-    └── sessions/                 # 对话历史
+    └── sessions/                 # 对话历史（session-local）
         ├── default.json
         └── other-session.json
 ```
+
+**说明：**
+- `short_term/` 是目录，每个session独立一个文件
+- `user.md`、`agent_identity.md`、`long_term.md` 在workspace级别共享
+- `memory_workspaces.json` 在全局 `~/.agent-lab/state/` 下，供memory service自动发现所有workspace
 
 ## 依赖关系
 

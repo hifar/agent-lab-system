@@ -17,6 +17,16 @@
 - API 新增多 workspace / session 支持：可通过 body、query、header 指定。
 - API 新增 SSE 流式返回：`stream=true` 时返回 OpenAI-compatible chunk 流。
 
+## 增量更新（2026-04-12 - 最新）
+
+- **Memory系统大幅优化**：
+  - Short-term memory 改为 session-local（`short_term_{session_id}.md`），避免跨session污染
+  - User/Agent identity 改为无条件更新（积极学习），去掉 `should_update_*` 网关
+  - Long-term memory 保持保守更新策略（仅记录通用规则）
+  - 记忆整理提示词明确了四层职责划分
+- API 鉴权功能：`api_auth` 与 `api_keys` 开关，支持 Bearer 和 X-API-Key
+- 详见 [Memory Optimization Document](MEMORY_OPTIMIZATION_2026_04.md)
+
 ## 增量更新（2026-04-12）
 
 - 配置新增 API 鉴权开关：`api_auth` 与 `api_keys`。
@@ -204,19 +214,21 @@ class MyTool(Tool):
 - `MemoryTask` - 记忆整理任务载荷
 
 **核心设计：**
-- 三层记忆：
-    - 长期层：`memories/agent_identity.md`、`memories/user.md`、`memories/long_term.md`
-    - 短期层：`memories/short_term.md`
+- 四层记忆（2026-04-12 优化）：
+    - **短期层**（Session-local）：`memories/short_term/{session_id}.md` - 当前会话压缩摘要，各session隔离
+    - **用户档案层**（跨session共享）：`memories/user.md` - 用户偏好、背景、身份、工作风格
+    - **Agent身份层**（跨session共享）：`memories/agent_identity.md` - Agent能力范围、工作方式、约束边界
+    - **长期层**（跨session共享）：`memories/long_term.md` - 通用规则、架构决策、重要常数
     - 运行层：最近 4 组对话（运行时窗口，不持久化为独立文件）
 - 后台队列目录：`state/memory_tasks/`、`state/memory_tasks_done/`、`state/memory_tasks_failed/`
 - 聊天主链路只负责 enqueue，整理逻辑在 service 或 `service once` 中异步处理
 - 只有超过最近 4 组 user turn 的旧对话才会进入 memory 队列；不足 4 组时不会产生待整理任务
 - 任意 workspace 发生 enqueue 时，都会注册到全局 workspace registry，供 memory service 自动发现
 - `agent-lab service run` 默认扫描所有已注册 workspace 并处理各自队列；`-w` 仅作为可选过滤条件
-- 写回策略：
-    - `short_term.md` 始终按“合并后完整内容”重写
-    - `user.md` / `agent_identity.md` 仅在模型判断有相关新增时更新
-    - `long_term.md` 仅在“重要且长期稳定”信息出现时更新
+- 写回策略（积极更新）：
+    - **short_term**：完全覆盖写回（不合并其他session）- 保持session隔离
+    - **user** / **agent_identity**：无条件更新（高更新率）- 积极学习用户/agent特性
+    - **long_term**：仅在信息明确有持久价值时更新 - 保守策略
 
 ## 数据流
 

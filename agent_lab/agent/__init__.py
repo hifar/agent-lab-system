@@ -222,8 +222,12 @@ class Agent:
                 snippets.append(f"## {skill_name}\n{content[:800].strip()}")
         return "\n\n".join(snippets)
 
-    def _build_workspace_context(self) -> str:
-        """Build prompt context from workspace files and project-level defaults."""
+    def _build_workspace_context(self, session_id: str = "default") -> str:
+        """Build prompt context from workspace files and project-level defaults.
+        
+        Args:
+            session_id: Session identifier for memory context.
+        """
         sections: list[str] = []
 
         prompt_paths = [
@@ -245,7 +249,7 @@ class Agent:
         if profile:
             sections.append(f"## User Profile\n{profile}")
 
-        memory_context = self.memory.build_memory_context()
+        memory_context = self.memory.build_memory_context(session_id=session_id)
         if memory_context:
             sections.append(
                 "## Memory Materials (System Reference)\n"
@@ -281,14 +285,18 @@ class Agent:
 
         return "\n\n".join(sections)
 
-    def _build_system_prompt(self) -> str:
-        """Build system prompt for the agent."""
+    def _build_system_prompt(self, session_id: str = "default") -> str:
+        """Build system prompt for the agent.
+        
+        Args:
+            session_id: Session identifier for memory context.
+        """
         if self._system_prompt:
             return self._system_prompt
 
         tool_names = self.tools.tool_names
         tool_list = "\n".join(f"- {name}" for name in tool_names)
-        workspace_context = self._build_workspace_context()
+        workspace_context = self._build_workspace_context(session_id=session_id)
 
         return f"""{self.INTERNAL_SYSTEM_MARKER}
     You are an AI agent with access to tools.
@@ -312,6 +320,7 @@ Be concise and direct in your responses.
         enable_think_mode: bool | None = None,
         enable_streaming_mode: bool | None = None,
         on_content_delta: Any | None = None,
+        session_id: str = "default",
     ) -> tuple[str, list[dict[str, Any]]]:
         """
         Run the agent on a message.
@@ -325,6 +334,7 @@ Be concise and direct in your responses.
             enable_think_mode: Optional think mode override
             enable_streaming_mode: Optional streaming mode override
             on_content_delta: Optional async callback for streaming text deltas
+            session_id: Session identifier for memory context (default: "default")
 
         Returns:
             (final_response, updated_messages)
@@ -341,7 +351,7 @@ Be concise and direct in your responses.
         if not has_internal_system:
             messages.insert(0, {
                 "role": "system",
-                "content": self._build_system_prompt(),
+                "content": self._build_system_prompt(session_id=session_id),
             })
 
         messages.append({"role": "user", "content": message})
@@ -410,7 +420,7 @@ Be concise and direct in your responses.
             messages.append(assistant_msg)
 
             if not response.has_tool_calls:
-                self.memory.enqueue_organization_task(messages, model=self.model, recent_turn_window=4)
+                self.memory.enqueue_organization_task(messages, model=self.model, session_id=session_id, recent_turn_window=4)
                 return response.content or "", messages
 
             for tool_call in response.tool_calls:
@@ -422,5 +432,5 @@ Be concise and direct in your responses.
                     "content": str(result),
                 })
 
-        self.memory.enqueue_organization_task(messages, model=self.model, recent_turn_window=4)
+        self.memory.enqueue_organization_task(messages, model=self.model, session_id=session_id, recent_turn_window=4)
         return "Max iterations reached without final response.", messages

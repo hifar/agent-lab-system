@@ -24,6 +24,7 @@ class MemoryTask:
     model: str
     older_messages: list[dict[str, Any]]
     recent_turn_window: int
+    session_id: str = "default"
 
 
 class MemoryManager:
@@ -41,7 +42,7 @@ class MemoryManager:
         self.workspace_registry_file = self.global_state_dir / "memory_workspaces.json"
 
         self.long_term_file = self.memories_dir / "long_term.md"
-        self.short_term_file = self.memories_dir / "short_term.md"
+        self.short_term_dir = self.memories_dir / "short_term"  # Session-local dir
         self.user_file = self.memories_dir / "user.md"
         self.agent_identity_file = self.memories_dir / "agent_identity.md"
 
@@ -62,12 +63,12 @@ class MemoryManager:
         self.tasks_dir.mkdir(parents=True, exist_ok=True)
         self.done_dir.mkdir(parents=True, exist_ok=True)
         self.failed_dir.mkdir(parents=True, exist_ok=True)
+        self.short_term_dir.mkdir(parents=True, exist_ok=True)
 
         for file_path, title in (
             (self.agent_identity_file, "# Agent Identity\n"),
             (self.user_file, "# User Profile Memory\n"),
             (self.long_term_file, "# Long-Term Memory\n"),
-            (self.short_term_file, "# Short-Term Memory\n"),
         ):
             if not file_path.exists():
                 file_path.write_text(title, encoding="utf-8")
@@ -114,6 +115,12 @@ class MemoryManager:
                 paths.append(Path(item).expanduser())
         return paths
 
+    def _get_short_term_file(self, session_id: str = "default") -> Path:
+        """Get session-local short-term memory file."""
+        # Sanitize session_id for safe filename
+        safe_session = "".join(c if c.isalnum() or c in "-_" else "_" for c in session_id)
+        return self.short_term_dir / f"short_term_{safe_session}.md"
+
     def split_recent_and_older(
         self,
         messages: list[dict[str, Any]],
@@ -141,9 +148,17 @@ class MemoryManager:
         messages: list[dict[str, Any]],
         *,
         model: str,
+        session_id: str = "default",
         recent_turn_window: int = 4,
     ) -> bool:
-        """Enqueue memory organization task from older context."""
+        """Enqueue memory organization task from older context.
+        
+        Args:
+            messages: Full conversation history.
+            model: Model name for the organization task.
+            session_id: Session identifier for session-local memory tracking.
+            recent_turn_window: Number of recent user turns to keep in context window.
+        """
         _, older = self.split_recent_and_older(messages, recent_turn_window=recent_turn_window)
         if not older:
             return False
@@ -167,19 +182,26 @@ class MemoryManager:
             "model": task.model,
             "older_messages": task.older_messages,
             "recent_turn_window": task.recent_turn_window,
+            "session_id": session_id,
         }
         task_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
         return True
 
-    def build_memory_context(self) -> str:
-        """Build memory context for system prompt from 3 layers."""
+    def build_memory_context(self, session_id: str = "default") -> str:
+        """Build memory context for system prompt from 3 layers.
+        
+        Args:
+            session_id: Session identifier for retrieving session-local short-term memory.
+        """
         sections: list[str] = []
 
+        short_term_file = self._get_short_term_file(session_id)
+        
         for title, path in (
             ("Agent Identity Memory", self.agent_identity_file),
             ("User Memory", self.user_file),
             ("Long-Term Memory", self.long_term_file),
-            ("Short-Term Memory", self.short_term_file),
+            ("Short-Term Memory", short_term_file),
         ):
             if path.exists() and path.is_file():
                 text = path.read_text(encoding="utf-8").strip()
@@ -396,14 +418,24 @@ class MemoryManager:
         *,
         model: str,
         older_messages: list[dict[str, Any]],
+        session_id: str = "default",
     ) -> None:
-        """Use LLM to merge and rewrite memory layers with update gating."""
+        """Use LLM to merge and rewrite memory layers with aggressive update strategy.
+        
+        Key strategy changes:
+        - short_term: Session-local, completely replaced (not merged with other sessions)
+        - user/agent_identity: Always updated (no should_update gates)
+        - long_term: Updated if LLM returns non-empty content
+        """
         history_text = self._messages_to_text(older_messages)
 
         current_agent_identity = self._read_memory_body(self.agent_identity_file)
         current_user = self._read_memory_body(self.user_file)
         current_long_term = self._read_memory_body(self.long_term_file)
-        current_short_term = self._read_memory_body(self.short_term_file)
+        
+        # Get session-local short-term memory
+        short_term_file = self._get_short_term_file(session_id)
+        current_short_term = self._read_memory_body(short_term_file)
 
         prompt = self._load_memory_organizer_prompt()
 
@@ -419,7 +451,7 @@ class MemoryManager:
                     f"【现有 agent_identity】\n{current_agent_identity}\n\n"
                     f"【现有 user】\n{current_user}\n\n"
                     f"【现有 long_term】\n{current_long_term}\n\n"
-                    f"【现有 short_term】\n{current_short_term}\n\n"
+                    f"【本会话 short_term】\n{current_short_term}\n\n"
                     f"【历史对话】\n{history_text}"
                 ),
             },
@@ -466,13 +498,11 @@ class MemoryManager:
         if not resp.content:
             return
 
+        # Fallback: if JSON parse fails, append response to short_term
         fallback_data: dict[str, Any] = {
             "short_term_merged": (current_short_term + "\n" + resp.content).strip(),
-            "should_update_user": False,
             "user_merged": current_user,
-            "should_update_agent_identity": False,
             "agent_identity_merged": current_agent_identity,
-            "should_update_long_term": False,
             "long_term_merged": current_long_term,
         }
 
@@ -487,31 +517,29 @@ class MemoryManager:
                 pass
 
         short_term_merged = str(data.get("short_term_merged", current_short_term)).strip()
-        should_update_user = bool(data.get("should_update_user", False))
         user_merged = str(data.get("user_merged", current_user)).strip()
-        should_update_agent_identity = bool(data.get("should_update_agent_identity", False))
         agent_identity_merged = str(
             data.get("agent_identity_merged", current_agent_identity)
         ).strip()
-        should_update_long_term = bool(data.get("should_update_long_term", False))
         long_term_merged = str(data.get("long_term_merged", current_long_term)).strip()
 
-        # Always rewrite short-term as merged summary.
-        self._write_memory_file(self.short_term_file, "# Short-Term Memory", short_term_merged)
+        # Session-local short-term: completely replaced (not merged with past sessions)
+        self._write_memory_file(short_term_file, f"# Short-Term Memory [{session_id}]", short_term_merged)
 
-        # Only rewrite user/agent identity when model confirms relevant updates.
-        if should_update_user:
+        # User memory: aggressive update (always merged, no gates)
+        if user_merged:
             self._write_memory_file(self.user_file, "# User Profile Memory", user_merged)
 
-        if should_update_agent_identity:
+        # Agent identity: aggressive update (always merged, no gates)
+        if agent_identity_merged:
             self._write_memory_file(
                 self.agent_identity_file,
                 "# Agent Identity",
                 agent_identity_merged,
             )
 
-        # Only rewrite long-term memory when important stable information is identified.
-        if should_update_long_term:
+        # Long-term memory: conditional update (only if meaningful content)
+        if long_term_merged and long_term_merged != current_long_term:
             self._write_memory_file(self.long_term_file, "# Long-Term Memory", long_term_merged)
 
     async def process_pending_tasks(
@@ -539,6 +567,7 @@ class MemoryManager:
                         model=str(task_data.get("model") or default_model),
                         older_messages=list(task_data.get("older_messages") or []),
                         recent_turn_window=int(task_data.get("recent_turn_window", 4)),
+                        session_id=str(task_data.get("session_id", "default")),
                     )
 
                     if task.task_type == "organize_memory":
@@ -546,6 +575,7 @@ class MemoryManager:
                             provider,
                             model=task.model,
                             older_messages=task.older_messages,
+                            session_id=task.session_id,
                         )
 
                     target = self.done_dir / f"{task_file.stem}.done.json"

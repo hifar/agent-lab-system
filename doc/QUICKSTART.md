@@ -125,19 +125,58 @@ agent-lab service run
 agent-lab service stop
 ```
 
-### 4.1 记忆系统说明（2026-04-07）
+### 4.1 记忆系统说明（2026-04-12 优化版）
 
-- 三层记忆：
-  - 长期：`agent_identity.md`、`user.md`、`long_term.md`
-  - 短期：`short_term.md`
-  - 上下文窗口：最近 4 组对话
-- 聊天时仅保留最近 4 组对话给主模型，历史部分进入后台整理任务。
-- 记忆文件采用“合并重写”策略，不做简单追加。
-- 默认包含安全解析兜底：若 memory 模型返回非标准 JSON，不会导致任务失败。
-- 只有当历史对话超过最近 4 组 user turn 时，才会产生待整理的 memory 任务；如果当前会话不足 4 组，对话仍只保留在当前上下文/会话历史中。
-- 任意 workspace 发生 chat/API enqueue 时，都会自动注册到全局 memory workspace registry。
-- `agent-lab service run` 默认会扫描所有已注册 workspace 并处理对应记忆队列，无需逐个指定。
-- 如果只想处理某一个 workspace，仍可使用 `-w/--workspace` 进行过滤。
+记忆架构采用**三层隔离 + session-local compression** 设计：
+
+**三层记忆职责明确分工：**
+- **短期记忆 (short_term_{session_id}.md)**: 
+  - **职责**：压缩当前session的对话内容
+  - **更新频率**：每次整理任务都重写（覆盖，不合并其他session）
+  - **特点**：session间完全隔离，自动清理跨session污染
+  
+- **用户档案 (user.md)**:
+  - **职责**：沉淀用户偏好、背景、身份、工作风格
+  - **更新频率**：高频率（任何相关信息都积极更新）
+  - **特点**：跨session累积，增量补充而非保守替换
+  
+- **Agent身份 (agent_identity.md)**:
+  - **职责**：记录agent的能力范围、工作方式、约束边界
+  - **更新频率**：高频率（任何相关信息都积极更新）
+  - **特点**：跨session学习，逐次完善agent的行为模式
+
+- **长期记忆 (long_term.md)**:
+  - **职责**：储存跨session的稳定事实、规则、架构决策、通用约束
+  - **更新频率**：中等（只记录真正普遍适用的信息）
+  - **特点**：高度审慎，仅在信息明确有持久价值时更新
+
+**关键改进点：**
+
+1. **短期记忆隔离** 
+   - 旧版：全局shared short_term.md，多个session混淆
+   - 新版：每个session独立的 `short_term_{session_id}.md`，完全隔离
+
+2. **用户/Agent信息积极更新**
+   - 旧版：需要LLM返回 `should_update_user=true` 才更新，容易遗漏
+   - 新版：LLM返回的merged内容直接写入，无条件更新，增强实时学习能力
+
+3. **提示词引导改进**
+   - 旧版："偏积极但仍需确定"，模糊不清
+   - 新版：明确告诉LLM各层职责，以及user/agent需积极合并
+
+**整理逻辑流程：**
+1. 当chat/API会话超过4个user turn时，触发后台整理任务
+2. 整理时同时处理4层记忆：
+   - ✅ short_term：新session数据完全覆盖旧内容（隔离）
+   - ✅ user.md：积极合并新信息（无条件更新）
+   - ✅ agent_identity.md：积极合并新能力边界（无条件更新）
+   - ✅ long_term.md：仅当LLM识别普遍规则时更新
+3. 任务队列处理（由 `agent-lab service run` 管理）
+
+**配置与扩展：**
+- 记忆整理提示词：`config/memory_organizer_prompt.md`
+- 修改该文件可调整各层的更新策略
+- 若文件缺失，系统回退到内置默认（完全兼容）
 
 ### 4.1.1 记忆整理提示词配置
 

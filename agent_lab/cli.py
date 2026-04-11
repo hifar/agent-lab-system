@@ -222,6 +222,7 @@ def chat(
                     enable_think_mode=think,
                     enable_streaming_mode=streaming,
                     on_content_delta=on_delta,
+                    session_id=sess.session_id,
                 )
                 console.print()
             else:
@@ -230,6 +231,7 @@ def chat(
                     history,
                     enable_think_mode=think,
                     enable_streaming_mode=streaming,
+                    session_id=sess.session_id,
                 )
                 console.print(f"[cyan]Agent:[/cyan] {response}\n")
 

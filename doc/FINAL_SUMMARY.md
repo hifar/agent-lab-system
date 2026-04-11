@@ -12,21 +12,39 @@
 4. 记忆整理策略升级为“相关即更新”，减少过度保守带来的记忆遗漏。
 5. 新增 system prompt 注入顺序文档：`doc/SYSTEM_PROMPT_INJECTION.md`。
 
-## 🔄 增量更新（2026-04-12）
+## 🔄 增量更新（2026-04-12 - 最新）
 
+**Memory 系统重大优化：**
+1. Short-term memory 改为 session-local（每个session独立文件 `short_term_{session_id}.md`）
+   - ✅ 完全隔离不同session数据，消除跨session污染
+   - ✅ 各session可独立压缩而不相互影响
+2. User/Agent identity 改为无条件积极更新（去掉 `should_update_*` 条件门槛）
+   - ✅ LLM返回的merged内容直接写入，无需确认
+   - ✅ 跨session累积学习用户特性和Agent能力
+3. Long-term memory 保持保守策略
+   - ✅ 仅记录真正通用的规则和架构决策
+4. 记忆整理提示词完全重写，明确四层职责 → 见 [Memory Optimization Document](MEMORY_OPTIMIZATION_2026_04.md)
+
+**API 功能完善：**
 1. API 支持运行时指定 `workspace`、`session`、`session_mode`。
 2. 参数支持三种传入方式：body、query、header，优先级为 body > query > header > 默认配置。
 3. API 已接入 session 持久化：非 `stateless` 模式下会读写 workspace 下的 `sessions/{session}.json`。
 4. API `stream=true` 已实现 SSE 流式返回，事件格式兼容 OpenAI `chat.completion.chunk`。
 
+## 🔄 增量更新（2026-04-12）
+
+- 配置新增 API 鉴权开关：`api_auth` 与 `api_keys`。
+- 当 `api_auth=true` 时，`/v1/models` 与 `/v1/chat/completions` 需要有效 API Key。
+- API Key 支持 `Authorization: Bearer <key>` 与 `X-API-Key` 两种传法。
+
 ## 🔄 增量更新（2026-04-07）
 
-1. 新增完整 `memory` 模块：三层记忆管理、任务入队、后台处理、上下文构建。
+1. 新增完整 `memory` 模块：四层记忆管理、任务入队、后台处理、上下文构建。
 2. 新增 CLI `service` 命令：`run | once | start | stop`，用于后台 memory 整理与压缩。
 3. Agent 运行时上下文窗口固定为最近 4 组对话，历史对话异步进入 memory 队列处理。
-4. 记忆写回改为“合并重写”策略：
+4. 记忆写回改为"合并重写"策略（v1）：
     - `short_term.md` 始终重写
-    - `user.md`、`agent_identity.md` 仅在相关新增时更新
+    - `user.md`、`agent_identity.md` 仅在相关新增时更新（v1 保守）→ v2 改为无条件更新
     - `long_term.md` 仅写入重要且长期稳定信息
 5. 全链路 LLM 日志落盘到 `workspace/log/`（request/response，JSONL + 可读文本）。
 6. 修复 memory 组织阶段的解析健壮性：支持 fenced JSON 与异常输出安全回退，避免任务误入 failed 队列。
@@ -56,13 +74,15 @@
 
 | 功能 | 状态 | 实现文件 |
 |------|------|---------|
-| Agent 功能 | ✅ | agent/__init__.py (140+ 行) |
+| Agent 功能（含session_id支持） | ✅ | agent/__init__.py (140+ 行) |
 | Tool 调用 | ✅ | tools/{base,registry,builtin}.py (260+ 行) |
 | LLM Provider | ✅ | providers/{base,openai_compat,anthropic_compat}.py (425+ 行) |
 | 配置系统 | ✅ | config/{schema,loader}.py (150+ 行) |
+| Memory 系统（四层隔离+积极更新） | ✅ | memory/__init__.py (500+ 行) |
 | Workspace | ✅ | workspace/__init__.py |
 | Skills | ✅ | skills/__init__.py |
-| CLI | ✅ | cli.py (275+ 行) |
+| CLI（含多workspace支持） | ✅ | cli.py (275+ 行) |
+| API（含SSE+鉴权+workspace路由） | ✅ | api/server.py (300+ 行) |
 
 ---
 

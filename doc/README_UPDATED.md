@@ -13,6 +13,11 @@ Minimal agent system for Python 3.12, optimized for simplicity and extensibility
 
 ## Recent Updates (2026-04-12)
 
+- **Memory System Optimization**:
+  - Short-term memory now session-local: `short_term_{session_id}.md` (no cross-session contamination)
+  - User/Agent identity now aggressively updated (removed conditional gates)
+  - Improved memory layer responsibilities via enhanced prompt guidance
+  - See [Memory Optimization](MEMORY_OPTIMIZATION_2026_04.md) for details
 - Added API runtime overrides for `workspace`, `session`, and `session_mode` via body, query, and headers.
 - Added API session persistence using workspace-local `sessions/{session}.json`.
 - Added SSE streaming response for `stream=true` using OpenAI-compatible chunk format.
@@ -46,10 +51,15 @@ Minimal agent system for Python 3.12, optimized for simplicity and extensibility
 - **LLM Providers**: OpenAI-compatible and Anthropic-compatible APIs
 - **Tool System**: Easy-to-extend tool registration and execution
 - **Configuration**: Pydantic-based config with environment variable support
+- **Memory System**: 4-layer session-isolated memory with aggressive user/agent learning
+  - Session-local short-term memory prevents cross-contamination
+  - Aggressive user/agent profile updates (no conditional gates)
+  - Background async memory organization and compression
 - **Workspace Management**: Organized workspace with skills, memories, sessions
-- **CLI**: Command-line interface for all operations
-- **OpenAI API Runtime Overrides**: Body/query/header based workspace and session routing
-- **SSE Streaming**: `stream=true` now returns `text/event-stream`
+- **CLI**: Command-line interface including multi-workspace support
+- **OpenAI-compatible API**: Full `/v1/chat/completions` support with workspace routing
+- **API Authentication**: Bearer token and X-API-Key support
+- **SSE Streaming**: `stream=true` returns OpenAI-compatible `text/event-stream`
 
 ## Quick Start
 

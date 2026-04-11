@@ -398,6 +398,7 @@ def create_app(config_path: str | None = None) -> FastAPI:
                             enable_think_mode=request.think_mode,
                             enable_streaming_mode=resolved_streaming,
                             on_content_delta=on_delta,
+                            session_id=session_id,
                         )
 
                         if session_mode != "stateless":
@@ -469,6 +470,7 @@ def create_app(config_path: str | None = None) -> FastAPI:
                 tool_choice=request.tool_choice,
                 enable_think_mode=request.think_mode,
                 enable_streaming_mode=resolved_streaming,
+                session_id=session_id,
             )
             if session_mode != "stateless":
                 session.save_history(messages)
