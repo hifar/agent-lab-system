@@ -210,6 +210,9 @@ class MyTool(Tool):
     - 运行层：最近 4 组对话（运行时窗口，不持久化为独立文件）
 - 后台队列目录：`state/memory_tasks/`、`state/memory_tasks_done/`、`state/memory_tasks_failed/`
 - 聊天主链路只负责 enqueue，整理逻辑在 service 或 `service once` 中异步处理
+- 只有超过最近 4 组 user turn 的旧对话才会进入 memory 队列；不足 4 组时不会产生待整理任务
+- 任意 workspace 发生 enqueue 时，都会注册到全局 workspace registry，供 memory service 自动发现
+- `agent-lab service run` 默认扫描所有已注册 workspace 并处理各自队列；`-w` 仅作为可选过滤条件
 - 写回策略：
     - `short_term.md` 始终按“合并后完整内容”重写
     - `user.md` / `agent_identity.md` 仅在模型判断有相关新增时更新

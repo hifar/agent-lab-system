@@ -109,6 +109,12 @@ agent-lab api --host 127.0.0.1 --port 8000
 # 启动 memory 后台服务（持续运行）
 agent-lab service start
 
+# 默认扫描所有已注册 workspace 并处理各自 memory 队列
+agent-lab service run
+
+# 如需只处理某个 workspace，也可以显式指定
+agent-lab service run -w "d:/workspace/ws01"
+
 # 仅执行一次待处理 memory 任务
 agent-lab service once
 
@@ -128,6 +134,10 @@ agent-lab service stop
 - 聊天时仅保留最近 4 组对话给主模型，历史部分进入后台整理任务。
 - 记忆文件采用“合并重写”策略，不做简单追加。
 - 默认包含安全解析兜底：若 memory 模型返回非标准 JSON，不会导致任务失败。
+- 只有当历史对话超过最近 4 组 user turn 时，才会产生待整理的 memory 任务；如果当前会话不足 4 组，对话仍只保留在当前上下文/会话历史中。
+- 任意 workspace 发生 chat/API enqueue 时，都会自动注册到全局 memory workspace registry。
+- `agent-lab service run` 默认会扫描所有已注册 workspace 并处理对应记忆队列，无需逐个指定。
+- 如果只想处理某一个 workspace，仍可使用 `-w/--workspace` 进行过滤。
 
 ### 4.1.1 记忆整理提示词配置
 

@@ -325,6 +325,12 @@ def run_api(
 def service(
     action: str = typer.Argument("run", help="Action: run|once|start|stop"),
     model: str | None = typer.Option(None, "--model", "-m", help="Model override"),
+    workspace: str | None = typer.Option(
+        None,
+        "--workspace",
+        "-w",
+        help="Workspace override for memory service",
+    ),
     interval: float = typer.Option(2.0, "--interval", help="Polling interval seconds"),
     config_path: str | None = typer.Option(None, "--config", help="Path to config file"),
 ) -> None:
@@ -336,10 +342,11 @@ def service(
         raise typer.Exit(1)
 
     cfg = load_config(cfg_path)
-    workspace_path = cfg.workspace_path
-    workspace_path.mkdir(parents=True, exist_ok=True)
+    workspace_path = Path(workspace).expanduser() if workspace else cfg.workspace_path
+    service_root = workspace_path if workspace else cfg_path.parent
+    service_root.mkdir(parents=True, exist_ok=True)
 
-    pid_file = workspace_path / "state" / "memory_service.pid"
+    pid_file = service_root / "state" / "memory_service.pid"
     pid_file.parent.mkdir(parents=True, exist_ok=True)
 
     if action == "stop":
@@ -361,6 +368,8 @@ def service(
         ]
         if model:
             cmd.extend(["--model", model])
+        if workspace:
+            cmd.extend(["--workspace", workspace])
         if config_path:
             cmd.extend(["--config", config_path])
 
@@ -384,16 +393,53 @@ def service(
         return
 
     provider = create_provider(cfg, model)
-    manager = MemoryManager(workspace=workspace_path, enable_log=cfg.log)
     run_once = action == "once"
 
     async def run_worker() -> None:
-        await manager.process_pending_tasks(
-            provider=provider,
-            default_model=model or cfg.agents.defaults.model,
-            once=run_once,
-            poll_interval_seconds=interval,
-        )
+        if workspace:
+            manager = MemoryManager(workspace=workspace_path, enable_log=cfg.log)
+            await manager.process_pending_tasks(
+                provider=provider,
+                default_model=model or cfg.agents.defaults.model,
+                once=run_once,
+                poll_interval_seconds=interval,
+            )
+            return
+
+        default_workspace = cfg.workspace_path.expanduser().resolve()
+
+        while True:
+            registered = MemoryManager.list_registered_workspaces()
+            workspace_candidates = [default_workspace, *registered]
+            seen: set[str] = set()
+            workspaces_to_process: list[Path] = []
+            for ws in workspace_candidates:
+                normalized = str(ws.expanduser().resolve())
+                if normalized in seen:
+                    continue
+                seen.add(normalized)
+                workspaces_to_process.append(Path(normalized))
+
+            for candidate_workspace in workspaces_to_process:
+                manager = MemoryManager(workspace=candidate_workspace, enable_log=cfg.log)
+                task_count = len(list(manager.tasks_dir.glob("*.json")))
+                if task_count <= 0:
+                    continue
+
+                console.print(
+                    f"[cyan]Processing {task_count} memory task(s) from workspace: {candidate_workspace}[/cyan]"
+                )
+                await manager.process_pending_tasks(
+                    provider=provider,
+                    default_model=model or cfg.agents.defaults.model,
+                    once=True,
+                    poll_interval_seconds=interval,
+                )
+
+            if run_once:
+                return
+
+            await asyncio.sleep(max(0.2, interval))
 
     if action == "once":
         console.print("[cyan]Running memory service once...[/cyan]")

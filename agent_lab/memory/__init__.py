@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import os
-import time
 import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -32,10 +32,13 @@ class MemoryManager:
     def __init__(self, workspace: Path, enable_log: bool = False) -> None:
         self.workspace = workspace
         self.enable_log = enable_log
+        self.control_root = Path.home() / ".agent-lab"
 
         self.memories_dir = self.workspace / "memories"
         self.state_dir = self.workspace / "state"
         self.log_dir = self.workspace / "log"
+        self.global_state_dir = self.control_root / "state"
+        self.workspace_registry_file = self.global_state_dir / "memory_workspaces.json"
 
         self.long_term_file = self.memories_dir / "long_term.md"
         self.short_term_file = self.memories_dir / "short_term.md"
@@ -54,6 +57,7 @@ class MemoryManager:
         self.memories_dir.mkdir(parents=True, exist_ok=True)
         self.state_dir.mkdir(parents=True, exist_ok=True)
         self.log_dir.mkdir(parents=True, exist_ok=True)
+        self.global_state_dir.mkdir(parents=True, exist_ok=True)
 
         self.tasks_dir.mkdir(parents=True, exist_ok=True)
         self.done_dir.mkdir(parents=True, exist_ok=True)
@@ -67,6 +71,48 @@ class MemoryManager:
         ):
             if not file_path.exists():
                 file_path.write_text(title, encoding="utf-8")
+
+    def _register_workspace(self) -> None:
+        """Register workspace in a global registry for memory service discovery."""
+        self.global_state_dir.mkdir(parents=True, exist_ok=True)
+        normalized = str(self.workspace.expanduser().resolve())
+
+        workspaces: list[str] = []
+        if self.workspace_registry_file.exists():
+            try:
+                raw = json.loads(self.workspace_registry_file.read_text(encoding="utf-8"))
+                if isinstance(raw, list):
+                    workspaces = [str(item) for item in raw if isinstance(item, str)]
+            except (json.JSONDecodeError, OSError):
+                workspaces = []
+
+        if normalized not in workspaces:
+            workspaces.append(normalized)
+            self.workspace_registry_file.write_text(
+                json.dumps(sorted(workspaces), ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+
+    @staticmethod
+    def list_registered_workspaces() -> list[Path]:
+        """List workspaces discovered from global memory activity."""
+        registry_file = Path.home() / ".agent-lab" / "state" / "memory_workspaces.json"
+        if not registry_file.exists():
+            return []
+
+        try:
+            raw = json.loads(registry_file.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            return []
+
+        if not isinstance(raw, list):
+            return []
+
+        paths: list[Path] = []
+        for item in raw:
+            if isinstance(item, str) and item.strip():
+                paths.append(Path(item).expanduser())
+        return paths
 
     def split_recent_and_older(
         self,
@@ -101,6 +147,8 @@ class MemoryManager:
         _, older = self.split_recent_and_older(messages, recent_turn_window=recent_turn_window)
         if not older:
             return False
+
+        self._register_workspace()
 
         task = MemoryTask(
             task_id=uuid.uuid4().hex,
@@ -520,7 +568,7 @@ class MemoryManager:
             if once:
                 return
 
-            time.sleep(max(0.2, poll_interval_seconds))
+            await asyncio.sleep(max(0.2, poll_interval_seconds))
 
 
 def stop_service_by_pid(pid_file: Path) -> bool:
