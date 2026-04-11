@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import time
 import uuid
 from pathlib import Path
@@ -19,8 +20,8 @@ from agent_lab.tools import ListDirTool, ReadFileTool, ToolRegistry, WriteFileTo
 class ChatMessage(BaseModel):
     """OpenAI chat message format."""
 
-    role: Literal["system", "user", "assistant", "tool"]
-    content: str | None = None
+    role: Literal["system", "developer", "user", "assistant", "tool", "function"]
+    content: Any | None = None
     name: str | None = None
     tool_call_id: str | None = None
     tool_calls: list[dict[str, Any]] | None = None
@@ -32,6 +33,7 @@ class ChatCompletionRequest(BaseModel):
     model: str | None = None
     messages: list[ChatMessage]
     max_tokens: int | None = None
+    max_completion_tokens: int | None = None
     temperature: float | None = None
     tools: list[dict[str, Any]] | None = None
     tool_choice: str | dict[str, Any] | None = None
@@ -76,7 +78,7 @@ def _extract_agent_input(messages: list[dict[str, Any]]) -> tuple[str, list[dict
     if not messages:
         raise ValueError("messages cannot be empty")
 
-    history = [dict(m) for m in messages]
+    history = [_normalize_message(dict(m)) for m in messages]
 
     for idx in range(len(history) - 1, -1, -1):
         msg = history[idx]
@@ -87,6 +89,51 @@ def _extract_agent_input(messages: list[dict[str, Any]]) -> tuple[str, list[dict
             raise ValueError("last user message content must be a non-empty string")
 
     raise ValueError("at least one user message is required")
+
+
+def _normalize_content(content: Any) -> str | None:
+    """Normalize OpenAI multimodal message content into plain text."""
+    if content is None:
+        return None
+
+    if isinstance(content, str):
+        return content
+
+    if isinstance(content, list):
+        parts: list[str] = []
+        for item in content:
+            if isinstance(item, str):
+                parts.append(item)
+                continue
+            if isinstance(item, dict):
+                text = item.get("text") or item.get("input_text") or item.get("content")
+                if isinstance(text, str):
+                    parts.append(text)
+        joined = "\n".join(p.strip() for p in parts if p and p.strip())
+        return joined or json.dumps(content, ensure_ascii=False)
+
+    if isinstance(content, dict):
+        text = content.get("text") or content.get("input_text") or content.get("content")
+        if isinstance(text, str):
+            return text
+        return json.dumps(content, ensure_ascii=False)
+
+    return str(content)
+
+
+def _normalize_message(message: dict[str, Any]) -> dict[str, Any]:
+    """Normalize message role/content for provider compatibility."""
+    normalized = dict(message)
+
+    role = str(normalized.get("role", "user"))
+    if role == "developer":
+        role = "system"
+    elif role == "function":
+        role = "tool"
+    normalized["role"] = role
+
+    normalized["content"] = _normalize_content(normalized.get("content"))
+    return normalized
 
 
 def _completion_response(
@@ -140,6 +187,15 @@ def create_app(config_path: str | None = None) -> FastAPI:
 
     @app.post("/v1/chat/completions")
     async def chat_completions(request: ChatCompletionRequest) -> dict[str, Any]:
+        if request.stream:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "stream=true is not supported as SSE yet; "
+                    "please set stream=false and use non-streaming JSON response"
+                ),
+            )
+
         if request.tools:
             raise HTTPException(
                 status_code=400,
@@ -169,7 +225,7 @@ def create_app(config_path: str | None = None) -> FastAPI:
             final_text, _ = await agent.run(
                 user_message,
                 history,
-                max_tokens=request.max_tokens,
+                max_tokens=request.max_tokens or request.max_completion_tokens,
                 temperature=request.temperature,
                 tool_choice=request.tool_choice,
                 enable_think_mode=request.think_mode,
