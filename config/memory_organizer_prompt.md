@@ -11,8 +11,8 @@
 
 规则:
 1) short_term_merged 需要把现有 short_term 与本次新增信息合并压缩，简洁可复用。
-2) 如果历史对话未涉及用户偏好/背景，不要更新 user（should_update_user=false）。
-3) 如果历史对话未涉及 agent 自身信息/边界，不要更新 agent_identity（should_update_agent_identity=false）。
-4) 只有重要且长期稳定的信息才允许进入 long_term（should_update_long_term=true），否则为 false。
+2) 只要历史对话涉及用户偏好/背景/身份/目标/约束中的任一相关信息，就更新 user（should_update_user=true）。
+3) 只要历史对话涉及 agent 的角色、能力、边界、工作方式中的任一相关信息，就更新 agent_identity（should_update_agent_identity=true）。
+4) 只要出现可复用的事实、规则、长期约束、稳定目标、稳定偏好等长期价值信息，即可更新 long_term（should_update_long_term=true）。
 5) merged 字段应表示“合并后的完整内容”，用于覆盖写回，不是增量追加。
-6) 内容不足时保持保守：宁可不更新长期记忆，也不要引入不确定信息。
+6) 更新策略应偏积极：有相关就更新；仅在信息明显冲突或无法判断真实性时才保持不更新。
