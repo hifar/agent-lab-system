@@ -1,5 +1,9 @@
 {
   "log": true,
+  "api_auth": false,
+  "api_keys": [
+    "<YOUR_AGENT_LAB_API_KEY>"
+  ],
   "agents": {
     "defaults": {
       "model": "qwen3.5-flash",

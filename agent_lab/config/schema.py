@@ -61,6 +61,8 @@ class Config(BaseSettings):
     """Root configuration."""
 
     log: bool = False
+    api_auth: bool = False
+    api_keys: list[str] = Field(default_factory=list)
     agents: AgentsConfig = Field(default_factory=AgentsConfig)
     providers: ProvidersConfig = Field(default_factory=ProvidersConfig)
     tools: ToolsConfig = Field(default_factory=ToolsConfig)

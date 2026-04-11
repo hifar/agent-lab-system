@@ -32,6 +32,8 @@ agent-lab init -w "d:/workspace/ws01"
 **OpenAI 示例：**
 ```json
 {
+  "api_auth": false,
+  "api_keys": ["<YOUR_AGENT_LAB_API_KEY>"],
   "providers": {
     "openai": {
       "api_key": "sk-..."
@@ -49,6 +51,8 @@ agent-lab init -w "d:/workspace/ws01"
 **Anthropic 示例：**
 ```json
 {
+  "api_auth": false,
+  "api_keys": ["<YOUR_AGENT_LAB_API_KEY>"],
   "providers": {
     "anthropic": {
       "api_key": "sk-ant-..."
@@ -136,6 +140,28 @@ agent-lab service stop
 - 开启 `config.json` 根字段 `log: true` 后，所有 LLM 请求/响应都会写入工作区 `log/`。
 - 日志包含：时间戳、请求类型、provider、model、base_url、payload。
 
+### 4.3 API 鉴权配置
+
+- 配置文件根字段：
+  - `api_auth: boolean`
+  - `api_keys: string[]`
+- 当 `api_auth=true` 时，`/v1/models` 和 `/v1/chat/completions` 需要提供有效 API Key。
+- 支持两种传法：
+  - `Authorization: Bearer <key>`
+  - `X-API-Key: <key>`
+
+示例：
+
+```json
+{
+  "api_auth": true,
+  "api_keys": [
+    "key-prod-001",
+    "key-internal-002"
+  ]
+}
+```
+
 ### 5. 通过 OpenAI 协议调用 Agent
 
 服务启动后，可以通过 OpenAI Chat Completions 协议调用：
@@ -143,6 +169,7 @@ agent-lab service stop
 ```bash
 curl http://127.0.0.1:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer key-prod-001" \
   -d '{
     "model": "qwen3.5-flash",
     "messages": [
@@ -156,6 +183,95 @@ curl http://127.0.0.1:8000/v1/chat/completions \
   }'
 ```
 
+### 5.1 API 指定 workspace 和 session
+
+API 现在支持通过三种方式指定 `workspace` 和 `session`：
+
+1. 请求体字段（优先级最高）
+- `workspace`
+- `session`
+- `session_mode`: `append | stateless | replace`
+
+2. Query 参数
+- `?workspace=...&session=...&session_mode=...`
+
+3. Header
+- `X-AgentLab-Workspace`
+- `X-AgentLab-Session`
+- `X-AgentLab-Session-Mode`
+
+优先级规则：
+- body > query > header > 默认配置
+
+会话模式：
+- `append`: 默认模式。有显式历史时优先使用请求内历史，否则读取并续写 `sessions/{session}.json`
+- `replace`: 用本次请求历史重建并覆盖该 session
+- `stateless`: 不读写 session 文件
+
+示例 1：请求体方式
+
+```bash
+curl http://127.0.0.1:8000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer key-prod-001" \
+  -d '{
+    "model": "qwen3.5-flash",
+    "workspace": "d:/workspace/ws01",
+    "session": "demo01",
+    "session_mode": "append",
+    "messages": [{"role": "user", "content": "介绍下产品"}],
+    "stream": false
+  }'
+```
+
+示例 2：Query 参数方式
+
+```bash
+curl "http://127.0.0.1:8000/v1/chat/completions?workspace=d:/workspace/ws01&session=demo01&session_mode=append" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer key-prod-001" \
+  -d '{
+    "model": "qwen3.5-flash",
+    "messages": [{"role": "user", "content": "介绍下产品"}],
+    "stream": false
+  }'
+```
+
+示例 3：Header 方式
+
+```bash
+curl http://127.0.0.1:8000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer key-prod-001" \
+  -H "X-AgentLab-Workspace: d:/workspace/ws01" \
+  -H "X-AgentLab-Session: demo01" \
+  -H "X-AgentLab-Session-Mode: append" \
+  -d '{
+    "model": "qwen3.5-flash",
+    "messages": [{"role": "user", "content": "介绍下产品"}],
+    "stream": false
+  }'
+```
+
+### 5.2 API 流式 SSE
+
+- 当 `stream=true` 时，API 现在返回标准 `text/event-stream`
+- 输出形态兼容 OpenAI `chat.completion.chunk`
+- 流结束时返回 `data: [DONE]`
+
+示例：
+
+```bash
+curl http://127.0.0.1:8000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -N \
+  -d '{
+    "model": "qwen3.5-flash",
+    "messages": [{"role": "user", "content": "你好"}],
+    "stream": true
+  }'
+```
+
 可用端点：
 - `GET /health`
 - `GET /v1/models`
@@ -163,7 +279,6 @@ curl http://127.0.0.1:8000/v1/chat/completions \
 
 当前限制：
 - CLI `--streaming` 已支持增量显示（OpenAI 兼容与 Anthropic provider）
-- API 的 `streaming_mode` / `stream` 目前仍返回非流式一次性 JSON
 - 暂不支持请求体传入 `tools`（使用本地已配置内置工具）
 - API/CLI 仅负责触发 memory 整理任务，具体整理由 `agent-lab service` 执行
 

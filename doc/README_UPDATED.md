@@ -11,6 +11,12 @@ Minimal agent system for Python 3.12, optimized for simplicity and extensibility
 - Extracted memory organizer prompt into `config/memory_organizer_prompt.md`.
 - Added dedicated documentation for system prompt injection order: `doc/SYSTEM_PROMPT_INJECTION.md`.
 
+## Recent Updates (2026-04-12)
+
+- Added API runtime overrides for `workspace`, `session`, and `session_mode` via body, query, and headers.
+- Added API session persistence using workspace-local `sessions/{session}.json`.
+- Added SSE streaming response for `stream=true` using OpenAI-compatible chunk format.
+
 ## Recent Updates (2026-04-07)
 
 - Added dedicated memory module for layered memory management and background organization.
@@ -42,6 +48,8 @@ Minimal agent system for Python 3.12, optimized for simplicity and extensibility
 - **Configuration**: Pydantic-based config with environment variable support
 - **Workspace Management**: Organized workspace with skills, memories, sessions
 - **CLI**: Command-line interface for all operations
+- **OpenAI API Runtime Overrides**: Body/query/header based workspace and session routing
+- **SSE Streaming**: `stream=true` now returns `text/event-stream`
 
 ## Quick Start
 

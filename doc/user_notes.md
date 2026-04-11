@@ -5,7 +5,7 @@ TODO：
 2. API支持workspace 和session
 3. 记忆功能优化
 4. web界面
-
+5. Background功能
 
 
 ```

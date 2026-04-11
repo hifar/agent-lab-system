@@ -92,6 +92,8 @@ def config(
         table.add_row("enable_think_mode", str(cfg.agents.defaults.enable_think_mode))
         table.add_row("enable_streaming_mode", str(cfg.agents.defaults.enable_streaming_mode))
         table.add_row("log", str(cfg.log))
+        table.add_row("api_auth", str(cfg.api_auth))
+        table.add_row("api_keys_count", str(len(cfg.api_keys)))
         console.print(table)
         console.print(f"\nConfig file: {config_path}")
     else:

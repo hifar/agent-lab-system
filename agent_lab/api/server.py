@@ -2,19 +2,26 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
+import re
 import time
 import uuid
 from pathlib import Path
 from typing import Any, Literal
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from agent_lab.agent import Agent
 from agent_lab.config import Config, load_config
 from agent_lab.providers import create_provider
+from agent_lab.session import Session
 from agent_lab.tools import ListDirTool, ReadFileTool, ToolRegistry, WriteFileTool
+
+
+SESSION_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 
 
 class ChatMessage(BaseModel):
@@ -40,6 +47,9 @@ class ChatCompletionRequest(BaseModel):
     think_mode: bool | None = None
     streaming_mode: bool | None = None
     stream: bool = False
+    workspace: str | None = None
+    session: str | None = None
+    session_mode: Literal["append", "stateless", "replace"] | None = None
 
 
 class ModelCard(BaseModel):
@@ -58,9 +68,8 @@ class ModelsResponse(BaseModel):
     data: list[ModelCard]
 
 
-def _build_registry(cfg: Config) -> ToolRegistry:
+def _build_registry(cfg: Config, workspace_path: Path) -> ToolRegistry:
     """Create tool registry based on configured tool flags."""
-    workspace_path = cfg.workspace_path
     workspace_path.mkdir(parents=True, exist_ok=True)
 
     tools = ToolRegistry()
@@ -170,6 +179,122 @@ def _completion_response(
     }
 
 
+def _completion_chunk(
+    *,
+    model: str,
+    delta: dict[str, Any],
+    finish_reason: str | None,
+) -> dict[str, Any]:
+    """Build OpenAI-compatible streaming chunk payload."""
+    return {
+        "id": f"chatcmpl-{uuid.uuid4().hex}",
+        "object": "chat.completion.chunk",
+        "created": int(time.time()),
+        "model": model,
+        "choices": [
+            {
+                "index": 0,
+                "delta": delta,
+                "finish_reason": finish_reason,
+            }
+        ],
+    }
+
+
+def _sse_line(payload: dict[str, Any]) -> str:
+    """Encode one SSE data line."""
+    return f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
+
+
+def _resolve_override(
+    *,
+    body_value: str | None,
+    query_value: str | None,
+    header_value: str | None,
+    default: str,
+) -> str:
+    """Resolve body/query/header override by precedence."""
+    if body_value:
+        return body_value
+    if query_value:
+        return query_value
+    if header_value:
+        return header_value
+    return default
+
+
+def _validate_session_id(session_id: str) -> str:
+    """Validate session id to prevent invalid file names and path traversal."""
+    if not SESSION_ID_PATTERN.fullmatch(session_id):
+        raise ValueError(
+            "session must match ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+        )
+    return session_id
+
+
+def _resolve_runtime_context(
+    body: ChatCompletionRequest,
+    raw_request: Request,
+    cfg: Config,
+) -> tuple[Path, str, str]:
+    """Resolve workspace/session/session_mode from body, query, headers, and defaults."""
+    workspace_value = _resolve_override(
+        body_value=body.workspace,
+        query_value=raw_request.query_params.get("workspace"),
+        header_value=raw_request.headers.get("X-AgentLab-Workspace"),
+        default=cfg.agents.defaults.workspace,
+    )
+    session_value = _resolve_override(
+        body_value=body.session,
+        query_value=raw_request.query_params.get("session"),
+        header_value=raw_request.headers.get("X-AgentLab-Session"),
+        default="default",
+    )
+    session_mode = _resolve_override(
+        body_value=body.session_mode,
+        query_value=raw_request.query_params.get("session_mode"),
+        header_value=raw_request.headers.get("X-AgentLab-Session-Mode"),
+        default="append",
+    )
+
+    if session_mode not in {"append", "stateless", "replace"}:
+        raise ValueError("session_mode must be one of: append, stateless, replace")
+
+    workspace_path = Path(workspace_value).expanduser()
+    session_id = _validate_session_id(session_value)
+    return workspace_path, session_id, session_mode
+
+
+def _extract_request_api_key(raw_request: Request) -> str | None:
+    """Extract API key from standard auth headers."""
+    authorization = raw_request.headers.get("Authorization")
+    if authorization:
+        scheme, _, value = authorization.partition(" ")
+        if scheme.lower() == "bearer" and value.strip():
+            return value.strip()
+        if authorization.strip():
+            return authorization.strip()
+
+    x_api_key = raw_request.headers.get("X-API-Key")
+    if x_api_key and x_api_key.strip():
+        return x_api_key.strip()
+
+    return None
+
+
+def _enforce_api_auth(cfg: Config, raw_request: Request) -> None:
+    """Validate incoming API key when API auth is enabled."""
+    if not cfg.api_auth:
+        return
+
+    if not cfg.api_keys:
+        raise HTTPException(status_code=500, detail="api_auth is enabled but api_keys is empty")
+
+    request_api_key = _extract_request_api_key(raw_request)
+    if not request_api_key or request_api_key not in cfg.api_keys:
+        raise HTTPException(status_code=401, detail="invalid or missing API key")
+
+
 def create_app(config_path: str | None = None) -> FastAPI:
     """Create FastAPI app that exposes OpenAI-compatible endpoints."""
     cfg = load_config(Path(config_path)) if config_path else load_config()
@@ -181,20 +306,14 @@ def create_app(config_path: str | None = None) -> FastAPI:
         return {"status": "ok"}
 
     @app.get("/v1/models", response_model=ModelsResponse)
-    async def list_models() -> ModelsResponse:
+    async def list_models(raw_request: Request) -> ModelsResponse:
+        _enforce_api_auth(cfg, raw_request)
         model_name = cfg.agents.defaults.model
         return ModelsResponse(data=[ModelCard(id=model_name)])
 
     @app.post("/v1/chat/completions")
-    async def chat_completions(request: ChatCompletionRequest) -> dict[str, Any]:
-        if request.stream:
-            raise HTTPException(
-                status_code=400,
-                detail=(
-                    "stream=true is not supported as SSE yet; "
-                    "please set stream=false and use non-streaming JSON response"
-                ),
-            )
+    async def chat_completions(request: ChatCompletionRequest, raw_request: Request) -> Any:
+        _enforce_api_auth(cfg, raw_request)
 
         if request.tools:
             raise HTTPException(
@@ -204,13 +323,21 @@ def create_app(config_path: str | None = None) -> FastAPI:
 
         resolved_streaming = request.streaming_mode if request.streaming_mode is not None else request.stream
 
+        try:
+            workspace_path, session_id, session_mode = _resolve_runtime_context(request, raw_request, cfg)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+        workspace_path.mkdir(parents=True, exist_ok=True)
+
         provider = create_provider(cfg, request.model)
-        tools = _build_registry(cfg)
+        tools = _build_registry(cfg, workspace_path)
+        session = Session(session_id, workspace_path)
 
         agent = Agent(
             provider=provider,
             tools=tools,
-            workspace=cfg.workspace_path,
+            workspace=workspace_path,
             model=request.model,
             max_iterations=cfg.agents.defaults.max_iterations,
             max_tokens=cfg.agents.defaults.max_tokens,
@@ -220,9 +347,121 @@ def create_app(config_path: str | None = None) -> FastAPI:
             enable_log=cfg.log,
         )
 
+        response_model_name = request.model or cfg.agents.defaults.model
+
         try:
-            user_message, history = _extract_agent_input([m.model_dump(exclude_none=True) for m in request.messages])
-            final_text, _ = await agent.run(
+            user_message, explicit_history = _extract_agent_input([m.model_dump(exclude_none=True) for m in request.messages])
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+        if session_mode == "stateless":
+            history = explicit_history
+        elif session_mode == "replace":
+            history = explicit_history
+        else:
+            history = explicit_history if explicit_history else session.load_history()
+
+        if request.stream:
+            async def event_stream():
+                queue: asyncio.Queue[str | None] = asyncio.Queue()
+                emitted_any_content = False
+
+                await queue.put(_sse_line(
+                    _completion_chunk(
+                        model=response_model_name,
+                        delta={"role": "assistant"},
+                        finish_reason=None,
+                    )
+                ))
+
+                async def on_delta(chunk: str) -> None:
+                    nonlocal emitted_any_content
+                    if not chunk:
+                        return
+                    emitted_any_content = True
+                    await queue.put(_sse_line(
+                        _completion_chunk(
+                            model=response_model_name,
+                            delta={"content": chunk},
+                            finish_reason=None,
+                        )
+                    ))
+
+                async def run_agent_task() -> None:
+                    try:
+                        final_text, messages = await agent.run(
+                            user_message,
+                            history,
+                            max_tokens=request.max_tokens or request.max_completion_tokens,
+                            temperature=request.temperature,
+                            tool_choice=request.tool_choice,
+                            enable_think_mode=request.think_mode,
+                            enable_streaming_mode=resolved_streaming,
+                            on_content_delta=on_delta,
+                        )
+
+                        if session_mode != "stateless":
+                            session.save_history(messages)
+
+                        if final_text and not emitted_any_content:
+                            await queue.put(_sse_line(
+                                _completion_chunk(
+                                    model=response_model_name,
+                                    delta={"content": final_text},
+                                    finish_reason=None,
+                                )
+                            ))
+
+                        await queue.put(_sse_line(
+                            _completion_chunk(
+                                model=response_model_name,
+                                delta={},
+                                finish_reason="stop",
+                            )
+                        ))
+                    except ValueError as exc:
+                        await queue.put(_sse_line(
+                            _completion_chunk(
+                                model=response_model_name,
+                                delta={"content": f"Error: {exc}"},
+                                finish_reason="stop",
+                            )
+                        ))
+                    except Exception as exc:
+                        await queue.put(_sse_line(
+                            _completion_chunk(
+                                model=response_model_name,
+                                delta={"content": f"Error: agent execution failed: {exc}"},
+                                finish_reason="stop",
+                            )
+                        ))
+                    finally:
+                        await queue.put("data: [DONE]\n\n")
+                        await queue.put(None)
+
+                producer = asyncio.create_task(run_agent_task())
+                try:
+                    while True:
+                        item = await queue.get()
+                        if item is None:
+                            break
+                        yield item
+                finally:
+                    if not producer.done():
+                        producer.cancel()
+
+            return StreamingResponse(
+                event_stream(),
+                media_type="text/event-stream",
+                headers={
+                    "Cache-Control": "no-cache",
+                    "Connection": "keep-alive",
+                    "X-Accel-Buffering": "no",
+                },
+            )
+
+        try:
+            final_text, messages = await agent.run(
                 user_message,
                 history,
                 max_tokens=request.max_tokens or request.max_completion_tokens,
@@ -231,6 +470,8 @@ def create_app(config_path: str | None = None) -> FastAPI:
                 enable_think_mode=request.think_mode,
                 enable_streaming_mode=resolved_streaming,
             )
+            if session_mode != "stateless":
+                session.save_history(messages)
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         except Exception as exc:
@@ -239,7 +480,7 @@ def create_app(config_path: str | None = None) -> FastAPI:
         # The provider usage is not currently propagated through Agent.run;
         # keep OpenAI-compatible usage fields with zeros for now.
         return _completion_response(
-            model=request.model or cfg.agents.defaults.model,
+            model=response_model_name,
             content=final_text,
             usage={},
         )

@@ -12,6 +12,13 @@
 4. 记忆整理策略升级为“相关即更新”，减少过度保守带来的记忆遗漏。
 5. 新增 system prompt 注入顺序文档：`doc/SYSTEM_PROMPT_INJECTION.md`。
 
+## 🔄 增量更新（2026-04-12）
+
+1. API 支持运行时指定 `workspace`、`session`、`session_mode`。
+2. 参数支持三种传入方式：body、query、header，优先级为 body > query > header > 默认配置。
+3. API 已接入 session 持久化：非 `stateless` 模式下会读写 workspace 下的 `sessions/{session}.json`。
+4. API `stream=true` 已实现 SSE 流式返回，事件格式兼容 OpenAI `chat.completion.chunk`。
+
 ## 🔄 增量更新（2026-04-07）
 
 1. 新增完整 `memory` 模块：三层记忆管理、任务入队、后台处理、上下文构建。
