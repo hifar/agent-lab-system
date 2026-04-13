@@ -36,6 +36,14 @@
 - Background 目录支持多个 `.md` 文件（含子目录），全部注入 system prompt
 - 注入顺序明确：background 位于 memory 之前
 
+## 增量更新（2026-04-13 - Web UI）
+
+- 新增轻量 Web 聊天入口：CLI `web` 命令（`agent-lab web --host --port --api-base`）。
+- 新增 `agent_lab/web/` 模块，提供浏览器 UI 与 `/proxy/chat` 代理端点。
+- Web 页面改为模板文件读取：`agent_lab/web/templates/index.html`，运行时注入默认参数。
+- 前端不再依赖 `https://fonts.googleapis.com` 等远程字体资源，改为本地系统字体栈。
+- Web 代理支持 SSE 转发和 OpenAI-compatible 非流式回退解析。
+
 ## 增量更新（2026-04-12）
 
 - 配置新增 API 鉴权开关：`api_auth` 与 `api_keys`。
@@ -213,6 +221,20 @@ class MyTool(Tool):
 - 支持运行时上下文参数：`workspace`、`background`、`session`、`session_mode`
 - 参数解析优先级：body > query > header > 默认配置
 - `stream=true` 时返回 `text/event-stream`，事件格式兼容 `chat.completion.chunk`
+
+#### 12. Web UI 服务（`web/app.py`）
+
+**职责：** 提供轻量浏览器聊天界面，并代理调用 OpenAI-compatible API。
+
+**关键接口：**
+- `GET /` - 返回前端聊天页面
+- `POST /proxy/chat` - 代理调用上游 `/v1/chat/completions` 并向浏览器输出 SSE
+
+**设计：**
+- 采用模板文件（`web/templates/index.html`）而非 Python 内嵌 HTML 字符串
+- 运行时向模板注入默认配置（API base、默认模型等）
+- 支持对上游流式响应进行增量转发，并兼容不同字段形态的文本提取
+- 支持上游非流式响应回退为单次 `delta` + `done` 事件
 
 #### 11. Memory 系统（`memory/`）
 

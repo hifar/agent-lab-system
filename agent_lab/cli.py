@@ -17,6 +17,7 @@ from agent_lab.memory import MemoryManager, stop_service_by_pid
 from agent_lab.providers import create_provider
 from agent_lab.session import Session
 from agent_lab.tools import ReadFileTool, WriteFileTool, ListDirTool, ToolRegistry
+from agent_lab.web import create_web_app
 from agent_lab.workspace import Workspace
 from agent_lab.api.server import create_app
 
@@ -342,6 +343,29 @@ def run_api(
     """Run OpenAI-compatible HTTP API server."""
     app_instance = create_app(config_path=config_path)
     console.print(f"[green]Starting API server on http://{host}:{port}[/green]")
+    uvicorn.run(app_instance, host=host, port=port)
+
+
+@app.command("web")
+def run_web(
+    host: str = typer.Option("127.0.0.1", "--host", help="Web UI host"),
+    port: int = typer.Option(7860, "--port", help="Web UI port"),
+    api_base: str = typer.Option(
+        "http://127.0.0.1:8000",
+        "--api-base",
+        help="Default agent-lab API base URL",
+    ),
+    api_key: str | None = typer.Option(None, "--api-key", help="Default API key for web proxy requests"),
+    model: str | None = typer.Option(None, "--model", help="Default model shown in UI"),
+) -> None:
+    """Run lightweight browser chat UI for agent-lab API."""
+    app_instance = create_web_app(
+        default_api_base=api_base,
+        default_api_key=api_key,
+        default_model=model,
+    )
+    console.print(f"[green]Starting web UI on http://{host}:{port}[/green]")
+    console.print(f"[dim]Default API base: {api_base}[/dim]")
     uvicorn.run(app_instance, host=host, port=port)
 
 

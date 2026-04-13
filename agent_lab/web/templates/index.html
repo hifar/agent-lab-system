@@ -1,0 +1,621 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>agent-lab web chat</title>
+  <style>
+    :root {
+      --bg-a: #f5f7f6;
+      --bg-b: #e8eeeb;
+      --panel: rgba(255, 255, 255, 0.92);
+      --line: #d6e0db;
+      --text: #15221d;
+      --muted: #5e7268;
+      --accent: #0f7a5a;
+      --user: #e8f4ef;
+      --assistant: #ffffff;
+      --danger: #a83333;
+      --shadow: 0 10px 40px rgba(21, 34, 29, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(1200px 700px at 95% -10%, #d7efe5 0%, transparent 60%),
+        radial-gradient(1000px 600px at -10% 110%, #dfeee8 0%, transparent 55%),
+        linear-gradient(135deg, var(--bg-a), var(--bg-b));
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .shell {
+      width: min(1300px, 100%);
+      height: calc(100vh - 40px);
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(8px);
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      overflow: hidden;
+    }
+
+    .side {
+      border-right: 1px solid var(--line);
+      padding: 18px;
+      overflow: auto;
+      background: linear-gradient(180deg, #f8fbf9, #f1f6f3);
+    }
+
+    .brand {
+      margin: 0 0 6px;
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: 0.2px;
+    }
+
+    .sub {
+      margin: 0 0 18px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .field { margin-bottom: 12px; }
+
+    .field label {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .field input,
+    .field select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 9px 10px;
+      font-size: 13px;
+      color: var(--text);
+      background: #fff;
+      outline: none;
+      transition: border-color .2s, box-shadow .2s;
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+
+    .field input:focus,
+    .field select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(15, 122, 90, 0.15);
+    }
+
+    .inline {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .check {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 8px 0;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .chat {
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      min-height: 0;
+      animation: fade-in .35s ease;
+    }
+
+    .top {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.75);
+    }
+
+    .title {
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .status {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .messages {
+      overflow: auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .msg {
+      max-width: 85%;
+      border-radius: 14px;
+      padding: 12px 14px;
+      line-height: 1.55;
+      white-space: pre-wrap;
+      word-break: break-word;
+      border: 1px solid var(--line);
+      animation: rise .22s ease;
+    }
+
+    .msg.user {
+      align-self: flex-end;
+      background: var(--user);
+      border-color: #c7dfd3;
+    }
+
+    .msg.assistant {
+      align-self: flex-start;
+      background: var(--assistant);
+    }
+
+    .meta {
+      margin-top: 8px;
+      font-family: Consolas, "Cascadia Mono", "Courier New", monospace;
+      font-size: 11px;
+      color: var(--muted);
+      opacity: .9;
+    }
+
+    .composer {
+      border-top: 1px solid var(--line);
+      padding: 14px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      background: rgba(255, 255, 255, 0.7);
+    }
+
+    textarea {
+      resize: none;
+      min-height: 70px;
+      max-height: 200px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-size: 14px;
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      outline: none;
+      transition: border-color .2s, box-shadow .2s;
+    }
+
+    textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(15, 122, 90, 0.15);
+    }
+
+    .actions {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    button {
+      border: none;
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 13px;
+      cursor: pointer;
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      transition: transform .08s ease, opacity .2s ease, background .2s ease;
+    }
+
+    button:active { transform: translateY(1px); }
+
+    .send {
+      background: var(--accent);
+      color: #fff;
+      min-width: 110px;
+      font-weight: 600;
+    }
+
+    .ghost {
+      background: #eef3f1;
+      color: #31463d;
+    }
+
+    .danger {
+      background: #fde8e8;
+      color: var(--danger);
+    }
+
+    .hint {
+      margin-top: 12px;
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    @keyframes rise {
+      from { transform: translateY(6px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    @keyframes fade-in {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @media (max-width: 980px) {
+      body { padding: 12px; }
+      .shell {
+        height: calc(100vh - 24px);
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr;
+      }
+      .side { border-right: none; border-bottom: 1px solid var(--line); }
+      .msg { max-width: 96%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <aside class="side">
+      <h1 class="brand">agent-lab web</h1>
+      <p class="sub">Lightweight chat panel for your local agent-lab API.</p>
+
+      <div class="field">
+        <label for="apiBase">API Base</label>
+        <input id="apiBase" placeholder="http://127.0.0.1:8000" />
+      </div>
+      <div class="field">
+        <label for="apiKey">API Key (optional)</label>
+        <input id="apiKey" type="password" placeholder="Bearer key" />
+      </div>
+      <div class="field">
+        <label for="model">Model</label>
+        <input id="model" placeholder="qwen3.5-flash / gpt-4o ..." />
+      </div>
+      <div class="field">
+        <label for="workspace">Workspace</label>
+        <input id="workspace" placeholder="d:/workspace/ws01" />
+      </div>
+      <div class="field">
+        <label for="session">Session</label>
+        <input id="session" placeholder="default" />
+      </div>
+      <div class="field">
+        <label for="background">Background</label>
+        <input id="background" placeholder="d:/shared/background" />
+      </div>
+      <div class="field">
+        <label for="sessionMode">Session Mode</label>
+        <select id="sessionMode">
+          <option value="append">append</option>
+          <option value="stateless">stateless</option>
+          <option value="replace">replace</option>
+        </select>
+      </div>
+      <div class="inline">
+        <div class="field">
+          <label for="maxTokens">Max Tokens</label>
+          <input id="maxTokens" placeholder="(optional)" />
+        </div>
+        <div class="field">
+          <label for="temperature">Temperature</label>
+          <input id="temperature" placeholder="0.7" />
+        </div>
+      </div>
+
+      <label class="check"><input id="thinkMode" type="checkbox" /> think_mode</label>
+      <label class="check"><input id="rebuildPrompt" type="checkbox" /> rebuild_system_prompt</label>
+
+      <div class="hint">
+        Tip: parameters are saved in browser local storage.
+      </div>
+    </aside>
+
+    <section class="chat">
+      <header class="top">
+        <div class="title">Chat</div>
+        <div id="status" class="status">idle</div>
+      </header>
+
+      <main id="messages" class="messages"></main>
+
+      <footer class="composer">
+        <textarea id="input" placeholder="Type your message... (Enter to send, Shift+Enter for newline)"></textarea>
+        <div class="actions">
+          <button id="sendBtn" class="send">Send</button>
+          <button id="stopBtn" class="ghost">Stop</button>
+          <button id="clearBtn" class="danger">Clear</button>
+        </div>
+      </footer>
+    </section>
+  </div>
+
+  <script>
+    const DEFAULTS = __DEFAULTS_JSON__;
+    const STORAGE_KEY = "agent_lab_web_ui_settings_v1";
+
+    const el = (id) => document.getElementById(id);
+
+    const state = {
+      settings: { ...DEFAULTS },
+      messages: [],
+      controller: null,
+      running: false,
+    };
+
+    function saveSettings() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state.settings));
+    }
+
+    function loadSettings() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return;
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === "object") {
+          state.settings = { ...state.settings, ...parsed };
+        }
+      } catch (err) {
+        console.warn("settings load failed", err);
+      }
+    }
+
+    function bindSettingsToForm() {
+      el("apiBase").value = state.settings.apiBase || "";
+      el("apiKey").value = state.settings.apiKey || "";
+      el("model").value = state.settings.model || "";
+      el("workspace").value = state.settings.workspace || "";
+      el("background").value = state.settings.background || "";
+      el("session").value = state.settings.session || "default";
+      el("sessionMode").value = state.settings.sessionMode || "append";
+      el("thinkMode").checked = !!state.settings.thinkMode;
+      el("rebuildPrompt").checked = !!state.settings.rebuildSystemPrompt;
+      el("maxTokens").value = state.settings.maxTokens || "";
+      el("temperature").value = state.settings.temperature || "";
+    }
+
+    function readSettingsFromForm() {
+      state.settings = {
+        apiBase: el("apiBase").value.trim(),
+        apiKey: el("apiKey").value,
+        model: el("model").value.trim(),
+        workspace: el("workspace").value.trim(),
+        background: el("background").value.trim(),
+        session: el("session").value.trim() || "default",
+        sessionMode: el("sessionMode").value,
+        thinkMode: el("thinkMode").checked,
+        rebuildSystemPrompt: el("rebuildPrompt").checked,
+        maxTokens: el("maxTokens").value.trim(),
+        temperature: el("temperature").value.trim(),
+      };
+      saveSettings();
+    }
+
+    function setStatus(text) {
+      el("status").textContent = text;
+    }
+
+    function appendMessage(role, text, meta = "") {
+      const box = document.createElement("article");
+      box.className = "msg " + role;
+
+      const body = document.createElement("div");
+      body.textContent = text;
+      box.appendChild(body);
+
+      let metaNode = null;
+      if (meta) {
+        const md = document.createElement("div");
+        md.className = "meta";
+        md.textContent = meta;
+        box.appendChild(md);
+        metaNode = md;
+      }
+
+      el("messages").appendChild(box);
+      el("messages").scrollTop = el("messages").scrollHeight;
+
+      return { body, metaNode };
+    }
+
+    function lockUi(locked) {
+      state.running = locked;
+      el("sendBtn").disabled = locked;
+      el("input").disabled = locked;
+    }
+
+    function parseSSEChunk(chunkText, onEvent) {
+      const blocks = chunkText.split("\n\n");
+      for (const block of blocks) {
+        const line = block.split("\n").find((ln) => ln.startsWith("data:"));
+        if (!line) continue;
+        const raw = line.slice(5).trim();
+        if (!raw) continue;
+        try {
+          const evt = JSON.parse(raw);
+          onEvent(evt);
+        } catch (_err) {
+          // Ignore non-json lines.
+        }
+      }
+    }
+
+    function consumeSSEBuffer(buffer, onEvent) {
+      const normalized = buffer.replace(/\r\n/g, "\n");
+      const blocks = normalized.split("\n\n");
+      const remainder = blocks.pop() || "";
+      const complete = blocks.join("\n\n");
+      if (complete) {
+        parseSSEChunk(complete, onEvent);
+      }
+      return remainder;
+    }
+
+    async function sendMessage() {
+      if (state.running) return;
+
+      const input = el("input");
+      const userText = input.value.trim();
+      if (!userText) return;
+
+      readSettingsFromForm();
+
+      const history = [...state.messages, { role: "user", content: userText }];
+      state.messages.push({ role: "user", content: userText });
+
+      appendMessage("user", userText, "session=" + state.settings.session + " mode=" + state.settings.sessionMode);
+      const assistantView = appendMessage("assistant", "", "streaming");
+      input.value = "";
+
+      const payload = {
+        api_base: state.settings.apiBase,
+        api_key: state.settings.apiKey || null,
+        model: state.settings.model || null,
+        workspace: state.settings.workspace || null,
+        background: state.settings.background || null,
+        session: state.settings.session,
+        session_mode: state.settings.sessionMode,
+        think_mode: state.settings.thinkMode,
+        rebuild_system_prompt: state.settings.rebuildSystemPrompt,
+        max_tokens: state.settings.maxTokens ? Number(state.settings.maxTokens) : null,
+        temperature: state.settings.temperature ? Number(state.settings.temperature) : null,
+        stream: true,
+        history,
+      };
+
+      state.controller = new AbortController();
+      lockUi(true);
+      setStatus("running");
+
+      let assistantText = "";
+      let buffered = "";
+      let gotDone = false;
+
+      try {
+        const response = await fetch("/proxy/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+          signal: state.controller.signal,
+        });
+
+        if (!response.ok || !response.body) {
+          throw new Error("HTTP " + response.status);
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+
+          buffered += decoder.decode(value, { stream: true });
+
+          buffered = consumeSSEBuffer(buffered, (evt) => {
+            if (evt.type === "delta" && typeof evt.text === "string") {
+              assistantText += evt.text;
+              assistantView.body.textContent = assistantText;
+              el("messages").scrollTop = el("messages").scrollHeight;
+            } else if (evt.type === "error") {
+              assistantText += (assistantText ? "\n" : "") + "[error] " + (evt.message || "unknown error");
+              assistantView.body.textContent = assistantText;
+            } else if (evt.type === "done") {
+              gotDone = true;
+            }
+          });
+
+          if (gotDone) {
+            await reader.cancel();
+            break;
+          }
+        }
+
+        buffered += decoder.decode();
+        buffered = consumeSSEBuffer(buffered, (evt) => {
+          if (evt.type === "delta" && typeof evt.text === "string") {
+            assistantText += evt.text;
+            assistantView.body.textContent = assistantText;
+          }
+        });
+
+        if (assistantView.metaNode) {
+          assistantView.metaNode.textContent = "done";
+        }
+
+        state.messages.push({ role: "assistant", content: assistantText || "(empty response)" });
+        setStatus("idle");
+      } catch (err) {
+        const msg = String(err?.message || err || "request failed");
+        assistantView.body.textContent = "[error] " + msg;
+        if (assistantView.metaNode) {
+          assistantView.metaNode.textContent = "error";
+        }
+        state.messages.push({ role: "assistant", content: "[error] " + msg });
+        setStatus("error");
+      } finally {
+        lockUi(false);
+        state.controller = null;
+      }
+    }
+
+    function stopRunning() {
+      if (state.controller) {
+        state.controller.abort();
+      }
+    }
+
+    function clearChat() {
+      state.messages = [];
+      el("messages").innerHTML = "";
+      setStatus("idle");
+    }
+
+    function wireEvents() {
+      [
+        "apiBase", "apiKey", "model", "workspace", "background",
+        "session", "sessionMode", "maxTokens", "temperature",
+        "thinkMode", "rebuildPrompt"
+      ].forEach((id) => {
+        el(id).addEventListener("change", () => {
+          readSettingsFromForm();
+        });
+      });
+
+      el("sendBtn").addEventListener("click", sendMessage);
+      el("stopBtn").addEventListener("click", stopRunning);
+      el("clearBtn").addEventListener("click", clearChat);
+
+      el("input").addEventListener("keydown", (ev) => {
+        if (ev.key === "Enter" && !ev.shiftKey) {
+          ev.preventDefault();
+          sendMessage();
+        }
+      });
+    }
+
+    function bootstrap() {
+      loadSettings();
+      bindSettingsToForm();
+      wireEvents();
+      setStatus("idle");
+      appendMessage("assistant", "Welcome. Configure API/workspace/session on the left, then start chatting.");
+    }
+
+    bootstrap();
+  </script>
+</body>
+</html>

@@ -24,6 +24,12 @@ agent-lab-system/
 │   │   ├── __init__.py
 │   │   └── server.py          # FastAPI 服务
 │   │
+│   ├── web/                   # 轻量 Web 聊天界面
+│   │   ├── __init__.py
+│   │   ├── app.py             # Web UI 服务与代理接口
+│   │   └── templates/
+│   │       └── index.html     # 前端页面模板（本地）
+│   │
 │   ├── config/                # 配置模块
 │   │   ├── __init__.py
 │   │   ├── schema.py          # Pydantic 模型
@@ -170,6 +176,7 @@ async def run(
 | `tools-list` | 列出工具 |
 | `skills-list` | 列出技能 |
 | `api` | 启动 OpenAI 兼容 API 服务 |
+| `web` | 启动轻量 Web 聊天界面 |
 | `service` | 管理 memory 后台服务（run/once/start/stop） |
 
 ### 11. Memory 系统 (`agent_lab/memory/`)
@@ -200,6 +207,18 @@ async def run(
 - `session_mode`
 
 支持来源：body > query > header > default
+
+### 13. Web 服务 (`agent_lab/web/`)
+
+| 文件 | 类/函数 | 职责 |
+|------|---------|------|
+| `app.py` | `create_web_app()` | 创建 Web UI FastAPI 应用 |
+| `templates/index.html` | - | 页面模板（CSS/JS/HTML） |
+
+**设计要点：**
+- 页面模板文件独立维护，不在 Python 中硬编码整页 HTML
+- 字体与样式使用本地资源/系统字体栈，避免运行时依赖外网字体服务
+- 通过 `/proxy/chat` 统一代理并转发上游流式与非流式响应
 
 ## 类关系图
 

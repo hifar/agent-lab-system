@@ -51,6 +51,7 @@ include = ["agent_lab*"]
 agent_lab = [
     "skills/**/*.md",
     "templates/**/*.md",
+    "web/templates/*.html",
 ]
 
 [tool.pytest.ini_options]

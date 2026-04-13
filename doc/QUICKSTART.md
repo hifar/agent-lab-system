@@ -112,6 +112,9 @@ agent-lab chat --streaming "给我一个 Python 示例"
 # 启动 OpenAI 兼容 API 服务
 agent-lab api --host 127.0.0.1 --port 8000
 
+# 启动轻量 Web 聊天界面（默认连接上面的 API）
+agent-lab web --host 127.0.0.1 --port 7860 --api-base http://127.0.0.1:8000
+
 # 启动 memory 后台服务（持续运行）
 agent-lab service start
 
@@ -130,6 +133,26 @@ agent-lab service run
 # 停止后台 memory 服务
 agent-lab service stop
 ```
+
+### 4.4 Web UI 使用说明
+
+`agent-lab web` 提供一个轻量浏览器聊天界面，适合本地调试和演示。
+
+- 访问地址：`http://127.0.0.1:7860`
+- 左侧参数支持：`api_base`、`api_key`、`model`、`workspace`、`session`、`background`、`session_mode`
+- 聊天体验：SSE 流式输出、Enter 发送、Shift+Enter 换行、Stop 中断、Clear 清空
+
+实现说明：
+
+- 页面模板位于：`agent_lab/web/templates/index.html`
+- Python 端在运行时读取模板并注入默认配置（不是硬编码 HTML）
+- UI 字体使用本地系统字体栈，不依赖 `fonts.googleapis.com` 远程资源
+
+常见排查：
+
+1. 修改模板后请重启 `agent-lab web` 并强刷浏览器（Ctrl+F5）。
+2. `api_base` 推荐填写 `http://127.0.0.1:8000`（无需手动拼接 `/v1/chat/completions`）。
+3. 若启用了 API 鉴权，请在页面中填写 `api_key`。
 
 ### 4.1 记忆系统说明（2026-04-12 优化版）
 
