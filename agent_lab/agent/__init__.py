@@ -25,6 +25,7 @@ class Agent:
         provider: LLMProvider,
         tools: ToolRegistry,
         workspace: Path,
+        background_dir: Path | None = None,
         model: str | None = None,
         max_iterations: int = 20,
         max_tokens: int = 4096,
@@ -38,6 +39,7 @@ class Agent:
         self.provider = provider
         self.tools = tools
         self.workspace = workspace
+        self.background_dir = background_dir.expanduser() if background_dir else None
         self.model = model or provider.default_model
         self.max_iterations = max_iterations
         self.max_tokens = max_tokens
@@ -222,6 +224,25 @@ class Agent:
                 snippets.append(f"## {skill_name}\n{content[:800].strip()}")
         return "\n\n".join(snippets)
 
+    def _background_markdown_context(self) -> str | None:
+        """Load all markdown files from background directory for prompt context."""
+        if self.background_dir is None:
+            return None
+        if not self.background_dir.exists() or not self.background_dir.is_dir():
+            return None
+
+        sections: list[str] = []
+        for md_file in sorted(self.background_dir.rglob("*.md")):
+            content = self._read_text_file(md_file)
+            if not content:
+                continue
+            rel_name = md_file.relative_to(self.background_dir).as_posix()
+            sections.append(f"### {rel_name}\n{content}")
+
+        if not sections:
+            return None
+        return "\n\n".join(sections)
+
     def _build_workspace_context(self, session_id: str = "default") -> str:
         """Build prompt context from workspace files and project-level defaults.
         
@@ -248,6 +269,15 @@ class Agent:
         profile = self._read_json_file(self.workspace / "profile" / "user_profile.json")
         if profile:
             sections.append(f"## User Profile\n{profile}")
+
+        background_context = self._background_markdown_context()
+        if background_context:
+            sections.append(
+                "## Background Story (Shared Context)\n"
+                "The following background materials are shared narrative/context documents. "
+                "Use them as high-priority context unless contradicted by explicit user instructions.\n\n"
+                f"{background_context}"
+            )
 
         memory_context = self.memory.build_memory_context(session_id=session_id)
         if memory_context:
@@ -321,6 +351,7 @@ Be concise and direct in your responses.
         enable_streaming_mode: bool | None = None,
         on_content_delta: Any | None = None,
         session_id: str = "default",
+        rebuild_system_prompt: bool = False,
     ) -> tuple[str, list[dict[str, Any]]]:
         """
         Run the agent on a message.
@@ -335,6 +366,7 @@ Be concise and direct in your responses.
             enable_streaming_mode: Optional streaming mode override
             on_content_delta: Optional async callback for streaming text deltas
             session_id: Session identifier for memory context (default: "default")
+            rebuild_system_prompt: Whether to force rebuilding internal system prompt
 
         Returns:
             (final_response, updated_messages)
@@ -348,7 +380,12 @@ Be concise and direct in your responses.
             and self.INTERNAL_SYSTEM_MARKER in first_content
         )
 
-        if not has_internal_system:
+        if has_internal_system and rebuild_system_prompt:
+            messages[0] = {
+                "role": "system",
+                "content": self._build_system_prompt(session_id=session_id),
+            }
+        elif not has_internal_system:
             messages.insert(0, {
                 "role": "system",
                 "content": self._build_system_prompt(session_id=session_id),

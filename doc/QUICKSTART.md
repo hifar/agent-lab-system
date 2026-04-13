@@ -91,6 +91,12 @@ agent-lab chat
 # 使用指定 workspace（不修改全局配置）
 agent-lab chat -w "d:/workspace/ws01" "你好"
 
+# 使用共享 background 目录（注入该目录下全部 .md 到 system prompt，位于 memory 之前）
+agent-lab chat -b "d:/shared/background" "请基于背景设定继续剧情"
+
+# 强制重建本轮 system prompt（默认不重建）
+agent-lab chat -rb -b "d:/shared/background" "请重新按新背景回答"
+
 # 使用特定模型
 agent-lab chat -m "gpt-4-turbo" "Your message here"
 
@@ -232,20 +238,23 @@ curl http://127.0.0.1:8000/v1/chat/completions \
   }'
 ```
 
-### 5.1 API 指定 workspace 和 session
+### 5.1 API 指定 workspace / background / session
 
-API 现在支持通过三种方式指定 `workspace` 和 `session`：
+API 现在支持通过三种方式指定 `workspace`、`background` 和 `session`：
 
 1. 请求体字段（优先级最高）
 - `workspace`
+- `background`（可选，background 目录路径）
 - `session`
 - `session_mode`: `append | stateless | replace`
+- `RebuildSystemPrompt`: `true | false`（默认 false）
 
 2. Query 参数
-- `?workspace=...&session=...&session_mode=...`
+- `?workspace=...&background=...&session=...&session_mode=...`
 
 3. Header
 - `X-AgentLab-Workspace`
+- `X-AgentLab-Background`
 - `X-AgentLab-Session`
 - `X-AgentLab-Session-Mode`
 
@@ -266,8 +275,10 @@ curl http://127.0.0.1:8000/v1/chat/completions \
   -d '{
     "model": "qwen3.5-flash",
     "workspace": "d:/workspace/ws01",
+    "background": "d:/shared/background/storypack-a",
     "session": "demo01",
     "session_mode": "append",
+    "RebuildSystemPrompt": true,
     "messages": [{"role": "user", "content": "介绍下产品"}],
     "stream": false
   }'
@@ -276,7 +287,7 @@ curl http://127.0.0.1:8000/v1/chat/completions \
 示例 2：Query 参数方式
 
 ```bash
-curl "http://127.0.0.1:8000/v1/chat/completions?workspace=d:/workspace/ws01&session=demo01&session_mode=append" \
+curl "http://127.0.0.1:8000/v1/chat/completions?workspace=d:/workspace/ws01&background=d:/shared/background/storypack-a&session=demo01&session_mode=append" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer key-prod-001" \
   -d '{
@@ -293,6 +304,7 @@ curl http://127.0.0.1:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer key-prod-001" \
   -H "X-AgentLab-Workspace: d:/workspace/ws01" \
+  -H "X-AgentLab-Background: d:/shared/background/storypack-a" \
   -H "X-AgentLab-Session: demo01" \
   -H "X-AgentLab-Session-Mode: append" \
   -d '{
@@ -301,6 +313,12 @@ curl http://127.0.0.1:8000/v1/chat/completions \
     "stream": false
   }'
 ```
+
+说明：
+- `background` 不指定时，不注入任何 background 内容。
+- 指定后会读取目录内全部 `.md`（含子目录）注入 system prompt。
+- 注入顺序：`workspace prompt/identity/profile -> background -> memory -> runtime/policies/skills/knowledge`。
+- `RebuildSystemPrompt` 默认 `false`，仅当显式为 `true` 时才强制重建第一条 internal system prompt。
 
 ### 5.2 API 流式 SSE
 

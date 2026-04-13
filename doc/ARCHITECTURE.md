@@ -27,6 +27,15 @@
 - API 鉴权功能：`api_auth` 与 `api_keys` 开关，支持 Bearer 和 X-API-Key
 - 详见 [Memory Optimization Document](MEMORY_OPTIMIZATION_2026_04.md)
 
+## 增量更新（2026-04-13）
+
+- 新增 **Background Story** 注入能力：
+    - CLI 支持 `chat -b/--background <dir>` 指定共享背景目录
+    - API 支持 `background` 的 body/query/header 覆盖，优先级与 workspace 一致
+    - 未指定 background 时不注入任何背景内容
+- Background 目录支持多个 `.md` 文件（含子目录），全部注入 system prompt
+- 注入顺序明确：background 位于 memory 之前
+
 ## 增量更新（2026-04-12）
 
 - 配置新增 API 鉴权开关：`api_auth` 与 `api_keys`。
@@ -126,7 +135,7 @@ class MyTool(Tool):
 - 可配置的最大迭代次数
 - 自动系统提示构建
 - 异步执行
-- 自动注入 workspace 语义上下文（提示词、记忆、画像、策略、技能摘要）
+- 自动注入 workspace 语义上下文（提示词、画像、background、记忆、策略、技能摘要）
 
 #### 5. Workspace 系统（`workspace/`）
 
@@ -201,7 +210,7 @@ class MyTool(Tool):
 - 请求中最后一条 user 消息作为本轮输入
 - 保留 OpenAI 兼容响应字段（`id` / `choices` / `usage`）
 - 支持行为参数：`think_mode`、`streaming_mode`（兼容 `stream`）
-- 支持运行时上下文参数：`workspace`、`session`、`session_mode`
+- 支持运行时上下文参数：`workspace`、`background`、`session`、`session_mode`
 - 参数解析优先级：body > query > header > 默认配置
 - `stream=true` 时返回 `text/event-stream`，事件格式兼容 `chat.completion.chunk`
 

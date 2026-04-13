@@ -22,6 +22,14 @@ Minimal agent system for Python 3.12, optimized for simplicity and extensibility
 - Added API session persistence using workspace-local `sessions/{session}.json`.
 - Added SSE streaming response for `stream=true` using OpenAI-compatible chunk format.
 
+## Recent Updates (2026-04-13)
+
+- Added shared **Background Story** support:
+  - CLI: `agent-lab chat -b <background_dir>`
+  - API: runtime `background` override via body/query/header (`X-AgentLab-Background`)
+- Background directory can include multiple `.md` files (recursive).
+- Background content is injected into system prompt **before memory**.
+
 ## Recent Updates (2026-04-07)
 
 - Added dedicated memory module for layered memory management and background organization.

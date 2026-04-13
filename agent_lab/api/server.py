@@ -12,7 +12,7 @@ from typing import Any, Literal
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, Field
+from pydantic import AliasChoices, BaseModel, Field
 
 from agent_lab.agent import Agent
 from agent_lab.config import Config, load_config
@@ -48,8 +48,13 @@ class ChatCompletionRequest(BaseModel):
     streaming_mode: bool | None = None
     stream: bool = False
     workspace: str | None = None
+    background: str | None = None
     session: str | None = None
     session_mode: Literal["append", "stateless", "replace"] | None = None
+    rebuild_system_prompt: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("rebuild_system_prompt", "RebuildSystemPrompt"),
+    )
 
 
 class ModelCard(BaseModel):
@@ -236,13 +241,19 @@ def _resolve_runtime_context(
     body: ChatCompletionRequest,
     raw_request: Request,
     cfg: Config,
-) -> tuple[Path, str, str]:
-    """Resolve workspace/session/session_mode from body, query, headers, and defaults."""
+) -> tuple[Path, Path | None, str, str]:
+    """Resolve workspace/background/session/session_mode from body, query, headers, and defaults."""
     workspace_value = _resolve_override(
         body_value=body.workspace,
         query_value=raw_request.query_params.get("workspace"),
         header_value=raw_request.headers.get("X-AgentLab-Workspace"),
         default=cfg.agents.defaults.workspace,
+    )
+    background_value = _resolve_override(
+        body_value=body.background,
+        query_value=raw_request.query_params.get("background"),
+        header_value=raw_request.headers.get("X-AgentLab-Background"),
+        default="",
     )
     session_value = _resolve_override(
         body_value=body.session,
@@ -261,8 +272,9 @@ def _resolve_runtime_context(
         raise ValueError("session_mode must be one of: append, stateless, replace")
 
     workspace_path = Path(workspace_value).expanduser()
+    background_path = Path(background_value).expanduser() if background_value else None
     session_id = _validate_session_id(session_value)
-    return workspace_path, session_id, session_mode
+    return workspace_path, background_path, session_id, session_mode
 
 
 def _extract_request_api_key(raw_request: Request) -> str | None:
@@ -324,11 +336,13 @@ def create_app(config_path: str | None = None) -> FastAPI:
         resolved_streaming = request.streaming_mode if request.streaming_mode is not None else request.stream
 
         try:
-            workspace_path, session_id, session_mode = _resolve_runtime_context(request, raw_request, cfg)
+            workspace_path, background_path, session_id, session_mode = _resolve_runtime_context(request, raw_request, cfg)
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
 
         workspace_path.mkdir(parents=True, exist_ok=True)
+        if background_path is not None and (not background_path.exists() or not background_path.is_dir()):
+            raise HTTPException(status_code=400, detail=f"background directory not found: {background_path}")
 
         provider = create_provider(cfg, request.model)
         tools = _build_registry(cfg, workspace_path)
@@ -338,6 +352,7 @@ def create_app(config_path: str | None = None) -> FastAPI:
             provider=provider,
             tools=tools,
             workspace=workspace_path,
+            background_dir=background_path,
             model=request.model,
             max_iterations=cfg.agents.defaults.max_iterations,
             max_tokens=cfg.agents.defaults.max_tokens,
@@ -399,6 +414,7 @@ def create_app(config_path: str | None = None) -> FastAPI:
                             enable_streaming_mode=resolved_streaming,
                             on_content_delta=on_delta,
                             session_id=session_id,
+                            rebuild_system_prompt=request.rebuild_system_prompt,
                         )
 
                         if session_mode != "stateless":
@@ -471,6 +487,7 @@ def create_app(config_path: str | None = None) -> FastAPI:
                 enable_think_mode=request.think_mode,
                 enable_streaming_mode=resolved_streaming,
                 session_id=session_id,
+                rebuild_system_prompt=request.rebuild_system_prompt,
             )
             if session_mode != "stateless":
                 session.save_history(messages)

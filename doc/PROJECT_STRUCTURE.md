@@ -166,6 +166,7 @@ async def run(
 | `config` | 显示配置 |
 | `chat` | 与 Agent 聊天 |
 | `chat -w` | 指定本次会话 workspace 路径 |
+| `chat -b` | 指定共享 background 目录（注入全部 .md） |
 | `tools-list` | 列出工具 |
 | `skills-list` | 列出技能 |
 | `api` | 启动 OpenAI 兼容 API 服务 |
@@ -191,6 +192,14 @@ async def run(
 |------|---------|------|
 | `server.py` | `create_app()` | 创建 FastAPI 应用并暴露 OpenAI 兼容端点 |
 | `__init__.py` | - | API 模块导出 |
+
+**运行时覆盖参数（与 workspace 同优先级规则）：**
+- `workspace`
+- `background`
+- `session`
+- `session_mode`
+
+支持来源：body > query > header > default
 
 ## 类关系图
 

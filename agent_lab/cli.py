@@ -110,7 +110,19 @@ def chat(
         "-w",
         help="Workspace override (does not modify config)",
     ),
+    background: str | None = typer.Option(
+        None,
+        "--background",
+        "-b",
+        help="Background directory containing shared .md files",
+    ),
     session: str = typer.Option("default", "--session", "-s", help="Session ID"),
+    rebuild_system_prompt: bool = typer.Option(
+        False,
+        "--rebuild-system-prompt",
+        "-rb",
+        help="Force rebuild of internal system prompt for this turn",
+    ),
     clear: bool = typer.Option(False, "--clear", help="Clear session history"),
     think: bool | None = typer.Option(None, "--think/--no-think", help="Enable think mode"),
     streaming: bool | None = typer.Option(
@@ -145,6 +157,13 @@ def chat(
     workspace_path = Path(workspace).expanduser() if workspace else cfg.workspace_path
     workspace_path.mkdir(parents=True, exist_ok=True)
 
+    background_path: Path | None = None
+    if background:
+        background_path = Path(background).expanduser()
+        if not background_path.exists() or not background_path.is_dir():
+            console.print(f"[red]✗ Background directory not found: {background_path}[/red]")
+            raise typer.Exit(1)
+
     # Create provider
     try:
         provider = create_provider(cfg, model)
@@ -171,6 +190,7 @@ def chat(
         provider=provider,
         tools=tools,
         workspace=workspace_path,
+        background_dir=background_path,
         model=model,
         max_iterations=cfg.agents.defaults.max_iterations,
         max_tokens=cfg.agents.defaults.max_tokens,
@@ -187,7 +207,7 @@ def chat(
             # Add system message if not present
             history.insert(0, {
                 "role": "system",
-                "content": agent._build_system_prompt(),
+                "content": agent._build_system_prompt(session_id=sess.session_id),
             })
 
         # Determine message source
@@ -223,6 +243,7 @@ def chat(
                     enable_streaming_mode=streaming,
                     on_content_delta=on_delta,
                     session_id=sess.session_id,
+                    rebuild_system_prompt=rebuild_system_prompt,
                 )
                 console.print()
             else:
@@ -232,6 +253,7 @@ def chat(
                     enable_think_mode=think,
                     enable_streaming_mode=streaming,
                     session_id=sess.session_id,
+                    rebuild_system_prompt=rebuild_system_prompt,
                 )
                 console.print(f"[cyan]Agent:[/cyan] {response}\n")
 
