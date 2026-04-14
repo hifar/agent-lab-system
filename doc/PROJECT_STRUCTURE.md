@@ -28,7 +28,8 @@ agent-lab-system/
 │   │   ├── __init__.py
 │   │   ├── app.py             # Web UI 服务与代理接口
 │   │   └── templates/
-│   │       └── index.html     # 前端页面模板（本地）
+│   │       ├── index.html     # 聊天页面模板（本地）
+│   │       └── logs.html      # 日志查看页面模板（本地）
 │   │
 │   ├── config/                # 配置模块
 │   │   ├── __init__.py
@@ -213,12 +214,15 @@ async def run(
 | 文件 | 类/函数 | 职责 |
 |------|---------|------|
 | `app.py` | `create_web_app()` | 创建 Web UI FastAPI 应用 |
-| `templates/index.html` | - | 页面模板（CSS/JS/HTML） |
+| `templates/index.html` | - | 聊天页面模板（会话列表、设置面板、消息区） |
+| `templates/logs.html` | - | 日志页面模板（文件列表、筛选、展开查看、request_id 配对） |
 
 **设计要点：**
 - 页面模板文件独立维护，不在 Python 中硬编码整页 HTML
 - 字体与样式使用本地资源/系统字体栈，避免运行时依赖外网字体服务
 - 通过 `/proxy/chat` 统一代理并转发上游流式与非流式响应
+- 提供 `/logs` 与 `/logs/api/*`，用于读取当前 workspace 的 JSONL 日志并做交互式检索
+- 聊天会话元数据保存在浏览器本地存储中，支持新建、重命名、删除和快速切换
 
 ## 类关系图
 

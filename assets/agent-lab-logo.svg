@@ -1,0 +1,39 @@
+<svg width="960" height="280" viewBox="0 0 960 280" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="20" y1="20" x2="300" y2="260" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0E8B66"/>
+      <stop offset="1" stop-color="#1E5B80"/>
+    </linearGradient>
+    <linearGradient id="chip" x1="52" y1="52" x2="248" y2="228" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#E9F8F2"/>
+      <stop offset="1" stop-color="#D6ECF8"/>
+    </linearGradient>
+    <filter id="shadow" x="0" y="0" width="340" height="280" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="10" stdDeviation="10" flood-color="#0B3B2B" flood-opacity="0.18"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#shadow)">
+    <rect x="20" y="20" width="280" height="240" rx="28" fill="url(#bg)"/>
+  </g>
+
+  <rect x="52" y="52" width="216" height="176" rx="20" fill="url(#chip)" stroke="#0F6D52" stroke-opacity="0.25"/>
+
+  <rect x="78" y="86" width="44" height="44" rx="8" fill="#0E8B66"/>
+  <rect x="198" y="86" width="44" height="44" rx="8" fill="#1E5B80"/>
+  <rect x="78" y="150" width="44" height="44" rx="8" fill="#1E5B80"/>
+  <rect x="198" y="150" width="44" height="44" rx="8" fill="#0E8B66"/>
+
+  <path d="M122 108H198M122 172H198M100 130V150M220 130V150" stroke="#0A3F30" stroke-width="10" stroke-linecap="round"/>
+
+  <circle cx="364" cy="140" r="4" fill="#77BBA4"/>
+
+  <text x="398" y="126" fill="#0F3D30" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="72" font-weight="700" letter-spacing="1.5">agent-lab</text>
+  <text x="402" y="168" fill="#3E5F56" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="22" font-weight="500" letter-spacing="0.8">Minimal, Workspace-Aware Agent Runtime</text>
+
+  <rect x="402" y="188" width="122" height="36" rx="18" fill="#E7F5EF"/>
+  <text x="428" y="212" fill="#0E8B66" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="16" font-weight="700">PYTHON</text>
+
+  <rect x="536" y="188" width="128" height="36" rx="18" fill="#E9EEF8"/>
+  <text x="563" y="212" fill="#1E5B80" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="16" font-weight="700">FASTAPI</text>
+</svg>

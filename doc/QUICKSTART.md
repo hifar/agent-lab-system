@@ -139,20 +139,33 @@ agent-lab service stop
 `agent-lab web` 提供一个轻量浏览器聊天界面，适合本地调试和演示。
 
 - 访问地址：`http://127.0.0.1:7860`
-- 左侧参数支持：`api_base`、`api_key`、`model`、`workspace`、`session`、`background`、`session_mode`
-- 聊天体验：SSE 流式输出、Enter 发送、Shift+Enter 换行、Stop 中断、Clear 清空
+- 左侧为 **session 清单**，支持 `New Chat` 新建会话、重命名、删除
+- `workspace`、`session`、`background` 在 **新建会话** 时设置；会话创建后不再修改
+- 左下角 **Settings** 面板支持：`api_base`、`api_key`、`model`、`think_mode`、`rebuild_system_prompt`、`session_mode`、`max_tokens`、`temperature`
+- 聊天体验：SSE 流式输出、Enter 发送、Shift+Enter 换行、Stop 中断、Clear 清空当前会话消息
+- 顶部支持 **Logs** 按钮，可打开独立日志查看页，不影响原聊天页
 
 实现说明：
 
 - 页面模板位于：`agent_lab/web/templates/index.html`
+- 日志页面模板位于：`agent_lab/web/templates/logs.html`
 - Python 端在运行时读取模板并注入默认配置（不是硬编码 HTML）
 - UI 字体使用本地系统字体栈，不依赖 `fonts.googleapis.com` 远程资源
+
+日志页能力：
+
+- 按当前 chat 的 `workspace/log/*.jsonl` 读取日志
+- 左侧文件列表按修改时间排序，便于快速按时间定位
+- 支持全文检索与 `record_type/request_type` 筛选
+- 支持输入 `request_id`，查看对应的 request/response 成对联动视图
+- 每条日志可展开查看完整 JSON 内容
 
 常见排查：
 
 1. 修改模板后请重启 `agent-lab web` 并强刷浏览器（Ctrl+F5）。
 2. `api_base` 推荐填写 `http://127.0.0.1:8000`（无需手动拼接 `/v1/chat/completions`）。
 3. 若启用了 API 鉴权，请在页面中填写 `api_key`。
+4. 若日志页无内容，先确认当前会话绑定的 `workspace` 下存在 `log/*.jsonl` 文件。
 
 ### 4.1 记忆系统说明（2026-04-12 优化版）
 

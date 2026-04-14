@@ -44,6 +44,15 @@
 - 前端不再依赖 `https://fonts.googleapis.com` 等远程字体资源，改为本地系统字体栈。
 - Web 代理支持 SSE 转发和 OpenAI-compatible 非流式回退解析。
 
+## 增量更新（2026-04-14 - Web UI 迭代）
+
+- 聊天页改为 **session-centric** 结构：左侧 session 清单，支持新建、重命名、删除。
+- `workspace` / `session` / `background` 绑定到会话创建阶段，已开始会话不再修改。
+- 新增设置面板，集中保存 API 与推理参数到浏览器本地存储。
+- 顶部新增 `Logs` 按钮，打开独立日志查看页面，不打断聊天页。
+- 新增独立日志模板：`agent_lab/web/templates/logs.html`。
+- 新增日志 API：文件列表、日志条目筛选、`request_id` 成对联动视图。
+
 ## 增量更新（2026-04-12）
 
 - 配置新增 API 鉴权开关：`api_auth` 与 `api_keys`。
@@ -229,12 +238,18 @@ class MyTool(Tool):
 **关键接口：**
 - `GET /` - 返回前端聊天页面
 - `POST /proxy/chat` - 代理调用上游 `/v1/chat/completions` 并向浏览器输出 SSE
+- `GET /logs` - 返回日志查看页面
+- `GET /logs/api/files` - 返回指定 workspace 的 JSONL 日志文件列表
+- `GET /logs/api/entries` - 返回指定日志文件的筛选结果
+- `GET /logs/api/request-pair` - 返回某个 `request_id` 对应的 request/response 配对记录
 
 **设计：**
 - 采用模板文件（`web/templates/index.html`）而非 Python 内嵌 HTML 字符串
 - 运行时向模板注入默认配置（API base、默认模型等）
 - 支持对上游流式响应进行增量转发，并兼容不同字段形态的文本提取
 - 支持上游非流式响应回退为单次 `delta` + `done` 事件
+- 聊天页采用会话列表 + 设置面板结构，浏览器本地持久化 session 元数据与设置
+- 日志页针对 `workspace/log/*.jsonl` 提供按文件、时间、关键词、请求类型、记录类型的快速定位能力
 
 #### 11. Memory 系统（`memory/`）
 
