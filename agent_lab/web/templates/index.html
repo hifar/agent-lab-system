@@ -106,6 +106,27 @@
       word-break: break-word;
     }
 
+    .session-actions {
+      margin-top: 8px;
+      display: flex;
+      gap: 6px;
+    }
+
+    .session-act-btn {
+      padding: 4px 8px;
+      font-size: 11px;
+      border-radius: 6px;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--muted);
+      cursor: pointer;
+    }
+
+    .session-act-btn:hover {
+      border-color: #9fcbb7;
+      color: #2f4b40;
+    }
+
     .side-foot {
       padding: 12px;
       border-top: 1px solid var(--line);
@@ -482,6 +503,29 @@
       return "s-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 7);
     }
 
+    function dateKey() {
+      const d = new Date();
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return "" + y + m + day;
+    }
+
+    function nextChatDefaultTitle() {
+      const key = "Chat_" + dateKey();
+      let maxSeq = 0;
+      for (const c of state.chats) {
+        if (!c || typeof c.title !== "string") continue;
+        const m = c.title.match(new RegExp("^" + key + "_(\\\\d+)$"));
+        if (!m) continue;
+        const n = Number(m[1]);
+        if (Number.isFinite(n) && n > maxSeq) {
+          maxSeq = n;
+        }
+      }
+      return key + "_" + String(maxSeq + 1).padStart(2, "0");
+    }
+
     function createChat(title, session, workspace, background) {
       return {
         id: "chat-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 7),
@@ -558,10 +602,33 @@
 
         const meta = document.createElement("div");
         meta.className = "session-meta";
-        meta.textContent = "session=" + chat.session + "\nworkspace=" + chat.workspace;
+        meta.textContent = "session=" + chat.session + "\nworkspace=" + (chat.workspace || "(empty)");
+
+        const actions = document.createElement("div");
+        actions.className = "session-actions";
+
+        const renameBtn = document.createElement("button");
+        renameBtn.className = "session-act-btn";
+        renameBtn.textContent = "Rename";
+        renameBtn.addEventListener("click", (ev) => {
+          ev.stopPropagation();
+          renameChat(chat.id);
+        });
+
+        const deleteBtn = document.createElement("button");
+        deleteBtn.className = "session-act-btn";
+        deleteBtn.textContent = "Delete";
+        deleteBtn.addEventListener("click", (ev) => {
+          ev.stopPropagation();
+          deleteChat(chat.id);
+        });
+
+        actions.appendChild(renameBtn);
+        actions.appendChild(deleteBtn);
 
         btn.appendChild(title);
         btn.appendChild(meta);
+        btn.appendChild(actions);
         btn.addEventListener("click", () => {
           if (state.running) return;
           state.activeChatId = chat.id;
@@ -625,7 +692,7 @@
       }
 
       el("chatTitle").textContent = chat.title;
-      let context = "session=" + chat.session + "\nworkspace=" + chat.workspace;
+      let context = "session=" + chat.session + "\nworkspace=" + (chat.workspace || "(empty)");
       if (chat.background) {
         context += "\nbackground=" + chat.background;
       }
@@ -669,7 +736,7 @@
       if (state.running) return;
 
       const chat = activeChat();
-      if (!chat || !chat.workspace) {
+      if (!chat) {
         setStatus("create chat first");
         return;
       }
@@ -804,7 +871,7 @@
     }
 
     function openNewChatDialog() {
-      el("newChatTitle").value = "";
+      el("newChatTitle").value = nextChatDefaultTitle();
       el("newChatSession").value = createSessionId();
       el("newChatWorkspace").value = "";
       el("newChatBackground").value = "";
@@ -812,15 +879,10 @@
     }
 
     function createNewChatFromDialog() {
-      const title = el("newChatTitle").value.trim() || "New Chat";
+      const title = el("newChatTitle").value.trim() || nextChatDefaultTitle();
       const session = el("newChatSession").value.trim() || createSessionId();
       const workspace = el("newChatWorkspace").value.trim();
       const background = el("newChatBackground").value.trim();
-
-      if (!workspace) {
-        alert("Workspace is required when creating a new chat.");
-        return;
-      }
 
       const chat = createChat(title, session, workspace, background);
       state.chats.unshift(chat);
@@ -829,6 +891,44 @@
       closeDialog("newChatDialog");
       renderAll();
       setStatus("idle");
+    }
+
+    function renameChat(chatId) {
+      const chat = state.chats.find((c) => c.id === chatId);
+      if (!chat) return;
+
+      const nextName = prompt("Rename chat", chat.title || "");
+      if (nextName === null) return;
+
+      const trimmed = nextName.trim();
+      if (!trimmed) return;
+
+      chat.title = trimmed;
+      saveChats();
+      renderAll();
+    }
+
+    function deleteChat(chatId) {
+      const chat = state.chats.find((c) => c.id === chatId);
+      if (!chat) return;
+
+      const ok = confirm("Delete chat: " + (chat.title || "(untitled)") + " ?");
+      if (!ok) return;
+
+      const idx = state.chats.findIndex((c) => c.id === chatId);
+      if (idx < 0) return;
+      state.chats.splice(idx, 1);
+
+      if (state.activeChatId === chatId) {
+        state.activeChatId = state.chats.length ? state.chats[0].id : null;
+      }
+
+      saveChats();
+      renderAll();
+
+      if (!state.chats.length) {
+        openNewChatDialog();
+      }
     }
 
     function bindSettingsToForm() {
