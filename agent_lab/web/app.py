@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 
 
 INDEX_TEMPLATE_PATH = Path(__file__).resolve().parent / "templates" / "index.html"
+LOGS_TEMPLATE_PATH = Path(__file__).resolve().parent / "templates" / "logs.html"
 DEFAULTS_PLACEHOLDER = "__DEFAULTS_JSON__"
 
 
@@ -151,6 +152,19 @@ def _render_index_html(*, default_api_base: str, default_api_key: str | None, de
     return template.replace(DEFAULTS_PLACEHOLDER, json.dumps(defaults, ensure_ascii=False), 1)
 
 
+def _render_logs_html() -> str:
+    """Read logs page HTML template."""
+    return LOGS_TEMPLATE_PATH.read_text(encoding="utf-8")
+
+
+def _workspace_log_dir(workspace: str) -> Path | None:
+    """Resolve workspace log directory path."""
+    ws = workspace.strip()
+    if not ws:
+        return None
+    return Path(ws).expanduser() / "log"
+
+
 def create_web_app(
     default_api_base: str = "http://127.0.0.1:8000",
     default_api_key: str | None = None,
@@ -175,6 +189,153 @@ def create_web_app(
             default_api_key=default_api_key,
             default_model=default_model,
         )
+
+    @app.get("/logs", response_class=HTMLResponse)
+    async def logs_page() -> str:
+        return _render_logs_html()
+
+    @app.get("/logs/api/files")
+    async def logs_api_files(workspace: str = "") -> dict[str, Any]:
+        log_dir = _workspace_log_dir(workspace)
+        if log_dir is None:
+            return {
+                "files": [],
+                "log_dir": None,
+                "message": "workspace is empty",
+            }
+
+        if not log_dir.exists() or not log_dir.is_dir():
+            return {
+                "files": [],
+                "log_dir": str(log_dir),
+                "message": "log directory not found",
+            }
+
+        files: list[dict[str, Any]] = []
+        for p in sorted(log_dir.glob("*.jsonl"), key=lambda x: x.stat().st_mtime, reverse=True):
+            stat = p.stat()
+            files.append(
+                {
+                    "name": p.name,
+                    "mtime": stat.st_mtime,
+                    "size": stat.st_size,
+                }
+            )
+
+        return {
+            "files": files,
+            "log_dir": str(log_dir),
+        }
+
+    @app.get("/logs/api/entries")
+    async def logs_api_entries(
+        workspace: str,
+        file: str,
+        q: str = "",
+        record_type: str = "all",
+        request_type: str = "all",
+        limit: int = 200,
+    ) -> dict[str, Any]:
+        log_dir = _workspace_log_dir(workspace)
+        if log_dir is None:
+            return {"entries": [], "count": 0, "message": "workspace is empty"}
+
+        if not log_dir.exists() or not log_dir.is_dir():
+            return {"entries": [], "count": 0, "message": "log directory not found"}
+
+        file_name = Path(file).name
+        target = log_dir / file_name
+        if not target.exists() or not target.is_file():
+            return {"entries": [], "count": 0, "message": f"file not found: {file_name}"}
+
+        query_text = q.strip().lower()
+        limit_value = max(1, min(limit, 2000))
+
+        try:
+            lines = target.read_text(encoding="utf-8", errors="replace").splitlines()
+        except OSError:
+            return {"entries": [], "count": 0, "message": f"failed to read file: {file_name}"}
+
+        entries: list[dict[str, Any]] = []
+        scanned = 0
+        for raw in reversed(lines):
+            scanned += 1
+            if not raw.strip():
+                continue
+
+            try:
+                item = json.loads(raw)
+            except json.JSONDecodeError:
+                item = {"raw": raw, "record_type": "unknown"}
+
+            if record_type != "all" and str(item.get("record_type", "")) != record_type:
+                continue
+            if request_type != "all" and str(item.get("request_type", "")) != request_type:
+                continue
+
+            if query_text:
+                hay = json.dumps(item, ensure_ascii=False).lower()
+                if query_text not in hay:
+                    continue
+
+            entries.append(item)
+            if len(entries) >= limit_value:
+                break
+
+        return {
+            "entries": entries,
+            "count": len(entries),
+            "scanned": scanned,
+            "file": file_name,
+            "truncated": len(entries) >= limit_value,
+        }
+
+    @app.get("/logs/api/request-pair")
+    async def logs_api_request_pair(
+        workspace: str,
+        file: str,
+        request_id: str,
+    ) -> dict[str, Any]:
+        log_dir = _workspace_log_dir(workspace)
+        if log_dir is None:
+            return {"entries": [], "count": 0, "message": "workspace is empty"}
+
+        if not log_dir.exists() or not log_dir.is_dir():
+            return {"entries": [], "count": 0, "message": "log directory not found"}
+
+        file_name = Path(file).name
+        target = log_dir / file_name
+        if not target.exists() or not target.is_file():
+            return {"entries": [], "count": 0, "message": f"file not found: {file_name}"}
+
+        request_id_value = request_id.strip()
+        if not request_id_value:
+            return {"entries": [], "count": 0, "message": "request_id is empty"}
+
+        try:
+            lines = target.read_text(encoding="utf-8", errors="replace").splitlines()
+        except OSError:
+            return {"entries": [], "count": 0, "message": f"failed to read file: {file_name}"}
+
+        matched: list[dict[str, Any]] = []
+        for raw in lines:
+            if not raw.strip():
+                continue
+            try:
+                item = json.loads(raw)
+            except json.JSONDecodeError:
+                continue
+
+            if str(item.get("request_id", "")) == request_id_value:
+                matched.append(item)
+
+        matched.sort(key=lambda item: (str(item.get("timestamp", "")), str(item.get("record_type", ""))))
+        return {
+            "entries": matched,
+            "count": len(matched),
+            "file": file_name,
+            "request_id": request_id_value,
+        }
 
     @app.post("/proxy/chat")
     async def proxy_chat(request: ProxyChatRequest) -> StreamingResponse:

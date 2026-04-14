@@ -1,0 +1,606 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>agent-lab logs</title>
+  <style>
+    :root {
+      --bg-a: #f5f7f6;
+      --bg-b: #e8eeeb;
+      --line: #d6e0db;
+      --text: #15221d;
+      --muted: #5e7268;
+      --accent: #0f7a5a;
+      --panel: rgba(255, 255, 255, 0.92);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(1200px 700px at 95% -10%, #d7efe5 0%, transparent 60%),
+        radial-gradient(1000px 600px at -10% 110%, #dfeee8 0%, transparent 55%),
+        linear-gradient(135deg, var(--bg-a), var(--bg-b));
+      min-height: 100vh;
+    }
+
+    .shell {
+      width: 100vw;
+      height: 100vh;
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      overflow: hidden;
+    }
+
+    .left {
+      border-right: 1px solid var(--line);
+      background: linear-gradient(180deg, #f8fbf9, #f1f6f3);
+      display: grid;
+      grid-template-rows: auto auto 1fr;
+      min-height: 0;
+    }
+
+    .head {
+      padding: 14px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .title {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .sub {
+      margin: 4px 0 0;
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.4;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .controls {
+      padding: 12px;
+      border-bottom: 1px solid var(--line);
+      display: grid;
+      gap: 8px;
+    }
+
+    .field label {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    .field input,
+    .field select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 12px;
+      background: #fff;
+      color: var(--text);
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    button {
+      border: none;
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 12px;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    .primary {
+      background: var(--accent);
+      color: #fff;
+      font-weight: 700;
+    }
+
+    .ghost {
+      background: #eef3f1;
+      color: #31463d;
+    }
+
+    .files {
+      overflow: auto;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .file-item {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 8px;
+      background: #fff;
+      cursor: pointer;
+      text-align: left;
+    }
+
+    .file-item.active {
+      border-color: #9fcbb7;
+      background: #eef8f3;
+    }
+
+    .file-name {
+      font-size: 12px;
+      font-weight: 600;
+      word-break: break-all;
+    }
+
+    .file-meta {
+      margin-top: 4px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .right {
+      display: grid;
+      grid-template-rows: auto auto 1fr;
+      min-height: 0;
+    }
+
+    .right-head {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.72);
+      font-size: 12px;
+    }
+
+    .entries {
+      overflow: auto;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      align-content: start;
+    }
+
+    .pair-wrap {
+      display: grid;
+      gap: 10px;
+    }
+
+    .pair-card {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--panel);
+      padding: 10px;
+    }
+
+    .pair-title {
+      font-size: 12px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    details {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--panel);
+      padding: 8px 10px;
+    }
+
+    summary {
+      cursor: pointer;
+      font-size: 12px;
+      line-height: 1.5;
+      color: var(--text);
+      word-break: break-word;
+    }
+
+    .tag {
+      display: inline-block;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 1px 8px;
+      margin-right: 6px;
+      font-size: 11px;
+      color: #3a5a4d;
+      background: #f2f7f4;
+    }
+
+    pre {
+      margin: 8px 0 0;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: #fff;
+      overflow: auto;
+      font-size: 12px;
+      line-height: 1.5;
+      color: #24322c;
+    }
+
+    .muted {
+      color: var(--muted);
+    }
+
+    @media (max-width: 980px) {
+      .shell {
+        grid-template-columns: 1fr;
+        grid-template-rows: 320px 1fr;
+      }
+      .left {
+        border-right: none;
+        border-bottom: 1px solid var(--line);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <aside class="left">
+      <div class="head">
+        <h1 class="title">Log Viewer</h1>
+        <div id="workspaceHint" class="sub"></div>
+      </div>
+
+      <div class="controls">
+        <div class="field">
+          <label for="workspaceInput">Workspace</label>
+          <input id="workspaceInput" placeholder="d:/workspace/ws01" />
+        </div>
+        <div class="row">
+          <button id="loadFilesBtn" class="primary">Load Files</button>
+          <button id="refreshEntriesBtn" class="ghost">Refresh</button>
+        </div>
+      </div>
+
+      <div id="fileList" class="files"></div>
+    </aside>
+
+    <section class="right">
+      <div class="right-head">
+        <div>
+          <span id="selectedFile" class="muted">No file selected</span>
+        </div>
+        <div id="resultMeta" class="muted"></div>
+      </div>
+
+      <div class="controls" style="border-bottom:1px solid var(--line)">
+        <div class="field">
+          <label for="searchInput">Search</label>
+          <input id="searchInput" placeholder="request_id, model, tool name, prompt ..." />
+        </div>
+        <div class="field">
+          <label for="requestIdInput">Request ID Pair View</label>
+          <input id="requestIdInput" placeholder="paste request_id to view request + response pair" />
+        </div>
+        <div class="row">
+          <div class="field">
+            <label for="recordTypeSelect">Record Type</label>
+            <select id="recordTypeSelect">
+              <option value="all">all</option>
+              <option value="request">request</option>
+              <option value="response">response</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="requestTypeSelect">Request Type</label>
+            <select id="requestTypeSelect">
+              <option value="all">all</option>
+              <option value="chat">chat</option>
+              <option value="memory_organize">memory_organize</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>&nbsp;</label>
+            <button id="loadPairBtn" class="ghost" style="width:100%">Load Pair</button>
+          </div>
+        </div>
+      </div>
+
+      <main id="entries" class="entries"></main>
+    </section>
+  </div>
+
+  <script>
+    const el = (id) => document.getElementById(id);
+
+    const state = {
+      workspace: "",
+      files: [],
+      selectedFile: "",
+    };
+
+    function formatTime(ts) {
+      const n = Number(ts);
+      if (!Number.isFinite(n)) return "-";
+      return new Date(n * 1000).toLocaleString();
+    }
+
+    function fromUrlWorkspace() {
+      const params = new URLSearchParams(window.location.search);
+      return (params.get("workspace") || "").trim();
+    }
+
+    async function fetchJson(url) {
+      const resp = await fetch(url);
+      if (!resp.ok) {
+        throw new Error("HTTP " + resp.status);
+      }
+      return await resp.json();
+    }
+
+    function setWorkspaceHint() {
+      el("workspaceHint").textContent = state.workspace
+        ? "workspace=" + state.workspace
+        : "No workspace selected. You can input one and load files.";
+    }
+
+    function renderFiles() {
+      const list = el("fileList");
+      list.innerHTML = "";
+
+      if (!state.files.length) {
+        const div = document.createElement("div");
+        div.className = "muted";
+        div.textContent = "No log files";
+        list.appendChild(div);
+        return;
+      }
+
+      for (const f of state.files) {
+        const btn = document.createElement("button");
+        btn.className = "file-item" + (f.name === state.selectedFile ? " active" : "");
+
+        const name = document.createElement("div");
+        name.className = "file-name";
+        name.textContent = f.name;
+
+        const meta = document.createElement("div");
+        meta.className = "file-meta";
+        meta.textContent = formatTime(f.mtime) + " | " + f.size + " bytes";
+
+        btn.appendChild(name);
+        btn.appendChild(meta);
+        btn.addEventListener("click", () => {
+          state.selectedFile = f.name;
+          renderFiles();
+          loadEntries();
+        });
+
+        list.appendChild(btn);
+      }
+    }
+
+    function summaryText(item) {
+      const ts = item.timestamp || "-";
+      const rec = item.record_type || "unknown";
+      const req = item.request_type || "-";
+      const it = item.iteration !== undefined ? item.iteration : "-";
+      const model = item.model || "-";
+      const provider = item.provider || "-";
+      return ts + " | " + rec + " | req=" + req + " | iter=" + it + " | model=" + model + " | " + provider;
+    }
+
+    function renderEntries(entries, metaText) {
+      const container = el("entries");
+      container.innerHTML = "";
+      el("resultMeta").textContent = metaText || "";
+
+      if (!entries.length) {
+        const div = document.createElement("div");
+        div.className = "muted";
+        div.textContent = "No entries";
+        container.appendChild(div);
+        return;
+      }
+
+      for (const item of entries) {
+        const details = document.createElement("details");
+
+        const summary = document.createElement("summary");
+        summary.innerHTML =
+          '<span class="tag">' + (item.record_type || "unknown") + '</span>' +
+          '<span class="tag">' + (item.request_type || "-") + '</span>' +
+          summaryText(item);
+
+        const pre = document.createElement("pre");
+        pre.textContent = JSON.stringify(item, null, 2);
+
+        details.appendChild(summary);
+        details.appendChild(pre);
+        container.appendChild(details);
+      }
+    }
+
+    function renderPairEntries(entries, metaText) {
+      const container = el("entries");
+      container.innerHTML = "";
+      el("resultMeta").textContent = metaText || "";
+
+      if (!entries.length) {
+        const div = document.createElement("div");
+        div.className = "muted";
+        div.textContent = "No request/response pair found";
+        container.appendChild(div);
+        return;
+      }
+
+      const wrap = document.createElement("div");
+      wrap.className = "pair-wrap";
+
+      for (const item of entries) {
+        const card = document.createElement("div");
+        card.className = "pair-card";
+
+        const title = document.createElement("div");
+        title.className = "pair-title";
+        title.textContent = (item.record_type || "unknown") + " | " + (item.timestamp || "-");
+
+        const pre = document.createElement("pre");
+        pre.textContent = JSON.stringify(item, null, 2);
+
+        card.appendChild(title);
+        card.appendChild(pre);
+        wrap.appendChild(card);
+      }
+
+      container.appendChild(wrap);
+    }
+
+    async function loadFiles() {
+      state.workspace = el("workspaceInput").value.trim();
+      setWorkspaceHint();
+
+      if (!state.workspace) {
+        state.files = [];
+        state.selectedFile = "";
+        renderFiles();
+        renderEntries([], "workspace is empty");
+        return;
+      }
+
+      const url = "/logs/api/files?workspace=" + encodeURIComponent(state.workspace);
+      const data = await fetchJson(url);
+      state.files = Array.isArray(data.files) ? data.files : [];
+      if (!state.selectedFile || !state.files.find((f) => f.name === state.selectedFile)) {
+        state.selectedFile = state.files.length ? state.files[0].name : "";
+      }
+
+      renderFiles();
+      if (state.selectedFile) {
+        await loadEntries();
+      } else {
+        renderEntries([], data.message || "no files");
+      }
+    }
+
+    async function loadEntries() {
+      const file = state.selectedFile;
+      el("selectedFile").textContent = file || "No file selected";
+
+      if (!state.workspace || !file) {
+        renderEntries([], "workspace or file missing");
+        return;
+      }
+
+      const q = el("searchInput").value.trim();
+      const recordType = el("recordTypeSelect").value;
+      const requestType = el("requestTypeSelect").value;
+
+      const url =
+        "/logs/api/entries"
+        + "?workspace=" + encodeURIComponent(state.workspace)
+        + "&file=" + encodeURIComponent(file)
+        + "&q=" + encodeURIComponent(q)
+        + "&record_type=" + encodeURIComponent(recordType)
+        + "&request_type=" + encodeURIComponent(requestType)
+        + "&limit=300";
+
+      const data = await fetchJson(url);
+      const entries = Array.isArray(data.entries) ? data.entries : [];
+      const meta = "count=" + (data.count || 0) + (data.truncated ? " (truncated)" : "");
+      renderEntries(entries, meta);
+    }
+
+    async function loadRequestPair() {
+      const file = state.selectedFile;
+      const requestId = el("requestIdInput").value.trim();
+      el("selectedFile").textContent = file || "No file selected";
+
+      if (!state.workspace || !file || !requestId) {
+        renderPairEntries([], "workspace, file or request_id missing");
+        return;
+      }
+
+      const url =
+        "/logs/api/request-pair"
+        + "?workspace=" + encodeURIComponent(state.workspace)
+        + "&file=" + encodeURIComponent(file)
+        + "&request_id=" + encodeURIComponent(requestId);
+
+      const data = await fetchJson(url);
+      const entries = Array.isArray(data.entries) ? data.entries : [];
+      const meta = "pair count=" + (data.count || 0) + " | request_id=" + requestId;
+      renderPairEntries(entries, meta);
+    }
+
+    function wireEvents() {
+      el("loadFilesBtn").addEventListener("click", () => {
+        loadFiles().catch((err) => {
+          renderEntries([], "load files failed: " + String(err));
+        });
+      });
+
+      el("refreshEntriesBtn").addEventListener("click", () => {
+        loadEntries().catch((err) => {
+          renderEntries([], "refresh failed: " + String(err));
+        });
+      });
+
+      el("searchInput").addEventListener("keydown", (ev) => {
+        if (ev.key === "Enter") {
+          loadEntries().catch((err) => {
+            renderEntries([], "search failed: " + String(err));
+          });
+        }
+      });
+
+      el("requestIdInput").addEventListener("keydown", (ev) => {
+        if (ev.key === "Enter") {
+          loadRequestPair().catch((err) => {
+            renderPairEntries([], "pair view failed: " + String(err));
+          });
+        }
+      });
+
+      el("loadPairBtn").addEventListener("click", () => {
+        loadRequestPair().catch((err) => {
+          renderPairEntries([], "pair view failed: " + String(err));
+        });
+      });
+
+      el("recordTypeSelect").addEventListener("change", () => {
+        loadEntries().catch((err) => {
+          renderEntries([], "filter failed: " + String(err));
+        });
+      });
+
+      el("requestTypeSelect").addEventListener("change", () => {
+        loadEntries().catch((err) => {
+          renderEntries([], "filter failed: " + String(err));
+        });
+      });
+    }
+
+    function bootstrap() {
+      state.workspace = fromUrlWorkspace();
+      el("workspaceInput").value = state.workspace;
+      setWorkspaceHint();
+      wireEvents();
+
+      if (state.workspace) {
+        loadFiles().catch((err) => {
+          renderEntries([], "init failed: " + String(err));
+        });
+      } else {
+        renderFiles();
+        renderEntries([], "input workspace and click Load Files");
+      }
+    }
+
+    bootstrap();
+  </script>
+</body>
+</html>

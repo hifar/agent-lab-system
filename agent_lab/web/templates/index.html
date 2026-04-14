@@ -149,6 +149,12 @@
       background: rgba(255, 255, 255, 0.72);
     }
 
+    .top-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
     .chat-title {
       font-size: 14px;
       font-weight: 700;
@@ -385,7 +391,10 @@
           <div id="chatTitle" class="chat-title">No session</div>
           <div id="chatContext" class="session-context"></div>
         </div>
-        <div id="status" class="status">idle</div>
+        <div class="top-right">
+          <button id="openLogBtn" class="ghost">Logs</button>
+          <div id="status" class="status">idle</div>
+        </div>
       </header>
 
       <main id="messages" class="messages"></main>
@@ -967,6 +976,13 @@
           ev.preventDefault();
           sendMessage();
         }
+      });
+
+      el("openLogBtn").addEventListener("click", () => {
+        const chat = activeChat();
+        const workspace = chat ? (chat.workspace || "") : "";
+        const target = "/logs?workspace=" + encodeURIComponent(workspace);
+        window.open(target, "_blank");
       });
 
       el("newChatBtn").addEventListener("click", openNewChatDialog);
