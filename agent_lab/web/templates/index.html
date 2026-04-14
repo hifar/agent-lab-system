@@ -16,7 +16,6 @@
       --user: #e8f4ef;
       --assistant: #ffffff;
       --danger: #a83333;
-      --shadow: 0 10px 40px rgba(21, 34, 29, 0.08);
     }
 
     * { box-sizing: border-box; }
@@ -30,107 +29,108 @@
         radial-gradient(1000px 600px at -10% 110%, #dfeee8 0%, transparent 55%),
         linear-gradient(135deg, var(--bg-a), var(--bg-b));
       min-height: 100vh;
-      display: flex;
-      justify-content: center;
-      padding: 20px;
     }
 
     .shell {
-      width: min(1300px, 100%);
-      height: calc(100vh - 40px);
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: 18px;
-      box-shadow: var(--shadow);
-      backdrop-filter: blur(8px);
+      width: 100vw;
+      height: 100vh;
       display: grid;
-      grid-template-columns: 320px 1fr;
+      grid-template-columns: 280px 1fr;
       overflow: hidden;
     }
 
-    .side {
+    .sidebar {
       border-right: 1px solid var(--line);
-      padding: 18px;
-      overflow: auto;
       background: linear-gradient(180deg, #f8fbf9, #f1f6f3);
+      display: grid;
+      grid-template-rows: auto auto 1fr auto;
+      min-height: 0;
+    }
+
+    .side-head {
+      padding: 14px;
+      border-bottom: 1px solid var(--line);
     }
 
     .brand {
-      margin: 0 0 6px;
+      margin: 0;
       font-size: 18px;
-      font-weight: 600;
-      letter-spacing: 0.2px;
+      font-weight: 700;
     }
 
     .sub {
-      margin: 0 0 18px;
-      color: var(--muted);
-      font-size: 13px;
-    }
-
-    .field { margin-bottom: 12px; }
-
-    .field label {
-      display: block;
+      margin: 4px 0 0;
       font-size: 12px;
       color: var(--muted);
-      margin-bottom: 6px;
     }
 
-    .field input,
-    .field select {
-      width: 100%;
-      border: 1px solid var(--line);
-      border-radius: 10px;
-      padding: 9px 10px;
-      font-size: 13px;
-      color: var(--text);
-      background: #fff;
-      outline: none;
-      transition: border-color .2s, box-shadow .2s;
-      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    .new-chat-wrap {
+      padding: 12px;
+      border-bottom: 1px solid var(--line);
     }
 
-    .field input:focus,
-    .field select:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(15, 122, 90, 0.15);
-    }
-
-    .inline {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-    }
-
-    .check {
+    .session-list {
+      overflow: auto;
+      padding: 8px;
       display: flex;
-      align-items: center;
+      flex-direction: column;
       gap: 8px;
-      margin: 8px 0;
+    }
+
+    .session-item {
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 10px;
+      padding: 10px;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .session-item.active {
+      border-color: #9fcbb7;
+      background: #eef8f3;
+    }
+
+    .session-title {
+      font-size: 13px;
+      font-weight: 600;
+      margin: 0 0 4px;
+      color: var(--text);
+    }
+
+    .session-meta {
+      font-size: 11px;
       color: var(--muted);
-      font-size: 12px;
+      line-height: 1.4;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .side-foot {
+      padding: 12px;
+      border-top: 1px solid var(--line);
+      display: flex;
+      gap: 8px;
     }
 
     .chat {
       display: grid;
       grid-template-rows: auto 1fr auto;
       min-height: 0;
-      animation: fade-in .35s ease;
     }
 
     .top {
-      padding: 14px 18px;
+      padding: 12px 16px;
       border-bottom: 1px solid var(--line);
       display: flex;
       justify-content: space-between;
       align-items: center;
-      background: rgba(255, 255, 255, 0.75);
+      background: rgba(255, 255, 255, 0.72);
     }
 
-    .title {
+    .chat-title {
       font-size: 14px;
-      font-weight: 600;
+      font-weight: 700;
     }
 
     .status {
@@ -147,14 +147,14 @@
     }
 
     .msg {
-      max-width: 85%;
-      border-radius: 14px;
+      max-width: 86%;
+      border-radius: 12px;
       padding: 12px 14px;
       line-height: 1.55;
       white-space: pre-wrap;
       word-break: break-word;
       border: 1px solid var(--line);
-      animation: rise .22s ease;
+      background: #fff;
     }
 
     .msg.user {
@@ -178,24 +178,25 @@
 
     .composer {
       border-top: 1px solid var(--line);
-      padding: 14px;
+      padding: 12px;
       display: grid;
       grid-template-columns: 1fr auto;
       gap: 10px;
-      background: rgba(255, 255, 255, 0.7);
+      background: rgba(255, 255, 255, 0.72);
     }
 
     textarea {
       resize: none;
-      min-height: 70px;
+      min-height: 72px;
       max-height: 200px;
       border: 1px solid var(--line);
-      border-radius: 12px;
+      border-radius: 10px;
       padding: 10px 12px;
       font-size: 14px;
       font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
       outline: none;
       transition: border-color .2s, box-shadow .2s;
+      background: #fff;
     }
 
     textarea:focus {
@@ -216,16 +217,13 @@
       font-size: 13px;
       cursor: pointer;
       font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
-      transition: transform .08s ease, opacity .2s ease, background .2s ease;
     }
-
-    button:active { transform: translateY(1px); }
 
     .send {
       background: var(--accent);
       color: #fff;
       min-width: 110px;
-      font-weight: 600;
+      font-weight: 700;
     }
 
     .ghost {
@@ -238,95 +236,134 @@
       color: var(--danger);
     }
 
-    .hint {
-      margin-top: 12px;
+    .dialog-mask {
+      position: fixed;
+      inset: 0;
+      background: rgba(16, 24, 20, 0.35);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 50;
+    }
+
+    .dialog {
+      width: min(520px, 100%);
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .dialog-head {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      font-weight: 700;
+      font-size: 14px;
+    }
+
+    .dialog-body {
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-height: 70vh;
+      overflow: auto;
+    }
+
+    .field label {
+      display: block;
       font-size: 12px;
       color: var(--muted);
-      line-height: 1.45;
+      margin-bottom: 6px;
     }
 
-    @keyframes rise {
-      from { transform: translateY(6px); opacity: 0; }
-      to { transform: translateY(0); opacity: 1; }
+    .field input,
+    .field select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 9px 10px;
+      font-size: 13px;
+      color: var(--text);
+      background: #fff;
+      outline: none;
     }
 
-    @keyframes fade-in {
-      from { opacity: 0; }
-      to { opacity: 1; }
+    .field input:focus,
+    .field select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(15, 122, 90, 0.15);
     }
 
-    @media (max-width: 980px) {
-      body { padding: 12px; }
+    .check {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .dialog-foot {
+      padding: 12px 14px;
+      border-top: 1px solid var(--line);
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .session-context {
+      font-size: 11px;
+      color: var(--muted);
+      white-space: pre-wrap;
+      line-height: 1.4;
+      margin-top: 4px;
+    }
+
+    @media (max-width: 960px) {
       .shell {
-        height: calc(100vh - 24px);
         grid-template-columns: 1fr;
-        grid-template-rows: auto 1fr;
+        grid-template-rows: 220px 1fr;
       }
-      .side { border-right: none; border-bottom: 1px solid var(--line); }
-      .msg { max-width: 96%; }
+      .sidebar {
+        border-right: none;
+        border-bottom: 1px solid var(--line);
+      }
+      .session-list {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+      }
+      .msg {
+        max-width: 96%;
+      }
     }
   </style>
 </head>
 <body>
   <div class="shell">
-    <aside class="side">
-      <h1 class="brand">agent-lab web</h1>
-      <p class="sub">Lightweight chat panel for your local agent-lab API.</p>
-
-      <div class="field">
-        <label for="apiBase">API Base</label>
-        <input id="apiBase" placeholder="http://127.0.0.1:8000" />
-      </div>
-      <div class="field">
-        <label for="apiKey">API Key (optional)</label>
-        <input id="apiKey" type="password" placeholder="Bearer key" />
-      </div>
-      <div class="field">
-        <label for="model">Model</label>
-        <input id="model" placeholder="qwen3.5-flash / gpt-4o ..." />
-      </div>
-      <div class="field">
-        <label for="workspace">Workspace</label>
-        <input id="workspace" placeholder="d:/workspace/ws01" />
-      </div>
-      <div class="field">
-        <label for="session">Session</label>
-        <input id="session" placeholder="default" />
-      </div>
-      <div class="field">
-        <label for="background">Background</label>
-        <input id="background" placeholder="d:/shared/background" />
-      </div>
-      <div class="field">
-        <label for="sessionMode">Session Mode</label>
-        <select id="sessionMode">
-          <option value="append">append</option>
-          <option value="stateless">stateless</option>
-          <option value="replace">replace</option>
-        </select>
-      </div>
-      <div class="inline">
-        <div class="field">
-          <label for="maxTokens">Max Tokens</label>
-          <input id="maxTokens" placeholder="(optional)" />
-        </div>
-        <div class="field">
-          <label for="temperature">Temperature</label>
-          <input id="temperature" placeholder="0.7" />
-        </div>
+    <aside class="sidebar">
+      <div class="side-head">
+        <h1 class="brand">agent-lab web</h1>
+        <p class="sub">Session-based chat workspace</p>
       </div>
 
-      <label class="check"><input id="thinkMode" type="checkbox" /> think_mode</label>
-      <label class="check"><input id="rebuildPrompt" type="checkbox" /> rebuild_system_prompt</label>
+      <div class="new-chat-wrap">
+        <button id="newChatBtn" class="send" style="width:100%">+ New Chat</button>
+      </div>
 
-      <div class="hint">
-        Tip: parameters are saved in browser local storage.
+      <div id="sessionList" class="session-list"></div>
+
+      <div class="side-foot">
+        <button id="openSettingsBtn" class="ghost" style="width:100%">Settings</button>
       </div>
     </aside>
 
     <section class="chat">
       <header class="top">
-        <div class="title">Chat</div>
+        <div>
+          <div id="chatTitle" class="chat-title">No session</div>
+          <div id="chatContext" class="session-context"></div>
+        </div>
         <div id="status" class="status">idle</div>
       </header>
 
@@ -343,69 +380,197 @@
     </section>
   </div>
 
+  <div id="newChatDialog" class="dialog-mask">
+    <div class="dialog">
+      <div class="dialog-head">Create New Chat</div>
+      <div class="dialog-body">
+        <div class="field">
+          <label for="newChatTitle">Chat title</label>
+          <input id="newChatTitle" placeholder="My Chat" />
+        </div>
+        <div class="field">
+          <label for="newChatSession">Session ID</label>
+          <input id="newChatSession" placeholder="session-001" />
+        </div>
+        <div class="field">
+          <label for="newChatWorkspace">Workspace (required)</label>
+          <input id="newChatWorkspace" placeholder="d:/workspace/ws01" />
+        </div>
+        <div class="field">
+          <label for="newChatBackground">Background (optional)</label>
+          <input id="newChatBackground" placeholder="d:/shared/background" />
+        </div>
+      </div>
+      <div class="dialog-foot">
+        <button id="cancelNewChatBtn" class="ghost">Cancel</button>
+        <button id="createNewChatBtn" class="send">Create</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="settingsDialog" class="dialog-mask">
+    <div class="dialog">
+      <div class="dialog-head">Settings</div>
+      <div class="dialog-body">
+        <div class="field">
+          <label for="apiBase">API Base</label>
+          <input id="apiBase" placeholder="http://127.0.0.1:8000" />
+        </div>
+        <div class="field">
+          <label for="apiKey">API Key (optional)</label>
+          <input id="apiKey" type="password" placeholder="Bearer key" />
+        </div>
+        <div class="field">
+          <label for="model">Model</label>
+          <input id="model" placeholder="qwen3.5-flash / gpt-4o ..." />
+        </div>
+        <div class="field">
+          <label for="sessionMode">Session Mode</label>
+          <select id="sessionMode">
+            <option value="append">append</option>
+            <option value="stateless">stateless</option>
+            <option value="replace">replace</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="maxTokens">Max Tokens (optional)</label>
+          <input id="maxTokens" placeholder="4096" />
+        </div>
+        <div class="field">
+          <label for="temperature">Temperature (optional)</label>
+          <input id="temperature" placeholder="0.7" />
+        </div>
+        <label class="check"><input id="thinkMode" type="checkbox" /> think_mode</label>
+        <label class="check"><input id="rebuildPrompt" type="checkbox" /> rebuild_system_prompt</label>
+      </div>
+      <div class="dialog-foot">
+        <button id="cancelSettingsBtn" class="ghost">Cancel</button>
+        <button id="saveSettingsBtn" class="send">Save</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     const DEFAULTS = __DEFAULTS_JSON__;
-    const STORAGE_KEY = "agent_lab_web_ui_settings_v1";
+    const SETTINGS_STORAGE_KEY = "agent_lab_web_ui_settings_v2";
+    const CHATS_STORAGE_KEY = "agent_lab_web_ui_chats_v2";
 
     const el = (id) => document.getElementById(id);
 
     const state = {
-      settings: { ...DEFAULTS },
-      messages: [],
+      settings: {
+        apiBase: DEFAULTS.apiBase || "http://127.0.0.1:8000",
+        apiKey: DEFAULTS.apiKey || "",
+        model: DEFAULTS.model || "",
+        sessionMode: DEFAULTS.sessionMode || "append",
+        thinkMode: !!DEFAULTS.thinkMode,
+        rebuildSystemPrompt: !!DEFAULTS.rebuildSystemPrompt,
+        maxTokens: DEFAULTS.maxTokens || "",
+        temperature: DEFAULTS.temperature || "",
+      },
+      chats: [],
+      activeChatId: null,
       controller: null,
       running: false,
     };
 
+    function nowIso() {
+      return new Date().toISOString();
+    }
+
+    function createSessionId() {
+      return "s-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 7);
+    }
+
+    function createChat(title, session, workspace, background) {
+      return {
+        id: "chat-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 7),
+        title: title || "New Chat",
+        session,
+        workspace,
+        background: background || "",
+        messages: [],
+        createdAt: nowIso(),
+      };
+    }
+
+    function activeChat() {
+      return state.chats.find((c) => c.id === state.activeChatId) || null;
+    }
+
     function saveSettings() {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state.settings));
+      localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(state.settings));
     }
 
     function loadSettings() {
       try {
-        const raw = localStorage.getItem(STORAGE_KEY);
+        const raw = localStorage.getItem(SETTINGS_STORAGE_KEY);
         if (!raw) return;
         const parsed = JSON.parse(raw);
         if (parsed && typeof parsed === "object") {
           state.settings = { ...state.settings, ...parsed };
         }
       } catch (err) {
-        console.warn("settings load failed", err);
+        console.warn("loadSettings failed", err);
       }
     }
 
-    function bindSettingsToForm() {
-      el("apiBase").value = state.settings.apiBase || "";
-      el("apiKey").value = state.settings.apiKey || "";
-      el("model").value = state.settings.model || "";
-      el("workspace").value = state.settings.workspace || "";
-      el("background").value = state.settings.background || "";
-      el("session").value = state.settings.session || "default";
-      el("sessionMode").value = state.settings.sessionMode || "append";
-      el("thinkMode").checked = !!state.settings.thinkMode;
-      el("rebuildPrompt").checked = !!state.settings.rebuildSystemPrompt;
-      el("maxTokens").value = state.settings.maxTokens || "";
-      el("temperature").value = state.settings.temperature || "";
+    function saveChats() {
+      localStorage.setItem(CHATS_STORAGE_KEY, JSON.stringify({ chats: state.chats, activeChatId: state.activeChatId }));
     }
 
-    function readSettingsFromForm() {
-      state.settings = {
-        apiBase: el("apiBase").value.trim(),
-        apiKey: el("apiKey").value,
-        model: el("model").value.trim(),
-        workspace: el("workspace").value.trim(),
-        background: el("background").value.trim(),
-        session: el("session").value.trim() || "default",
-        sessionMode: el("sessionMode").value,
-        thinkMode: el("thinkMode").checked,
-        rebuildSystemPrompt: el("rebuildPrompt").checked,
-        maxTokens: el("maxTokens").value.trim(),
-        temperature: el("temperature").value.trim(),
-      };
-      saveSettings();
+    function loadChats() {
+      try {
+        const raw = localStorage.getItem(CHATS_STORAGE_KEY);
+        if (!raw) return;
+        const parsed = JSON.parse(raw);
+        if (parsed && Array.isArray(parsed.chats)) {
+          state.chats = parsed.chats;
+          state.activeChatId = parsed.activeChatId || (state.chats[0] ? state.chats[0].id : null);
+        }
+      } catch (err) {
+        console.warn("loadChats failed", err);
+      }
     }
 
     function setStatus(text) {
       el("status").textContent = text;
+    }
+
+    function lockUi(locked) {
+      state.running = locked;
+      el("sendBtn").disabled = locked;
+      el("input").disabled = locked;
+      el("newChatBtn").disabled = locked;
+    }
+
+    function renderSessionList() {
+      const container = el("sessionList");
+      container.innerHTML = "";
+
+      for (const chat of state.chats) {
+        const btn = document.createElement("button");
+        btn.className = "session-item" + (chat.id === state.activeChatId ? " active" : "");
+
+        const title = document.createElement("div");
+        title.className = "session-title";
+        title.textContent = chat.title;
+
+        const meta = document.createElement("div");
+        meta.className = "session-meta";
+        meta.textContent = "session=" + chat.session + "\nworkspace=" + chat.workspace;
+
+        btn.appendChild(title);
+        btn.appendChild(meta);
+        btn.addEventListener("click", () => {
+          if (state.running) return;
+          state.activeChatId = chat.id;
+          saveChats();
+          renderAll();
+        });
+
+        container.appendChild(btn);
+      }
     }
 
     function appendMessage(role, text, meta = "") {
@@ -431,10 +596,46 @@
       return { body, metaNode };
     }
 
-    function lockUi(locked) {
-      state.running = locked;
-      el("sendBtn").disabled = locked;
-      el("input").disabled = locked;
+    function renderMessages() {
+      const messagesEl = el("messages");
+      messagesEl.innerHTML = "";
+
+      const chat = activeChat();
+      if (!chat) {
+        appendMessage("assistant", "Click New Chat to start.");
+        return;
+      }
+
+      if (!Array.isArray(chat.messages) || chat.messages.length === 0) {
+        appendMessage("assistant", "New session ready. Workspace is locked for this chat.");
+        return;
+      }
+
+      for (const m of chat.messages) {
+        appendMessage(m.role, m.content || "");
+      }
+    }
+
+    function renderHeader() {
+      const chat = activeChat();
+      if (!chat) {
+        el("chatTitle").textContent = "No session";
+        el("chatContext").textContent = "Create a new chat to set workspace/session.";
+        return;
+      }
+
+      el("chatTitle").textContent = chat.title;
+      let context = "session=" + chat.session + "\nworkspace=" + chat.workspace;
+      if (chat.background) {
+        context += "\nbackground=" + chat.background;
+      }
+      el("chatContext").textContent = context;
+    }
+
+    function renderAll() {
+      renderSessionList();
+      renderHeader();
+      renderMessages();
     }
 
     function parseSSEChunk(chunkText, onEvent) {
@@ -467,16 +668,21 @@
     async function sendMessage() {
       if (state.running) return;
 
+      const chat = activeChat();
+      if (!chat || !chat.workspace) {
+        setStatus("create chat first");
+        return;
+      }
+
       const input = el("input");
       const userText = input.value.trim();
       if (!userText) return;
 
-      readSettingsFromForm();
+      const history = [...chat.messages, { role: "user", content: userText }];
+      chat.messages.push({ role: "user", content: userText });
+      saveChats();
+      renderMessages();
 
-      const history = [...state.messages, { role: "user", content: userText }];
-      state.messages.push({ role: "user", content: userText });
-
-      appendMessage("user", userText, "session=" + state.settings.session + " mode=" + state.settings.sessionMode);
       const assistantView = appendMessage("assistant", "", "streaming");
       input.value = "";
 
@@ -484,9 +690,9 @@
         api_base: state.settings.apiBase,
         api_key: state.settings.apiKey || null,
         model: state.settings.model || null,
-        workspace: state.settings.workspace || null,
-        background: state.settings.background || null,
-        session: state.settings.session,
+        workspace: chat.workspace,
+        background: chat.background || null,
+        session: chat.session,
         session_mode: state.settings.sessionMode,
         think_mode: state.settings.thinkMode,
         rebuild_system_prompt: state.settings.rebuildSystemPrompt,
@@ -556,7 +762,8 @@
           assistantView.metaNode.textContent = "done";
         }
 
-        state.messages.push({ role: "assistant", content: assistantText || "(empty response)" });
+        chat.messages.push({ role: "assistant", content: assistantText || "(empty response)" });
+        saveChats();
         setStatus("idle");
       } catch (err) {
         const msg = String(err?.message || err || "request failed");
@@ -564,7 +771,8 @@
         if (assistantView.metaNode) {
           assistantView.metaNode.textContent = "error";
         }
-        state.messages.push({ role: "assistant", content: "[error] " + msg });
+        chat.messages.push({ role: "assistant", content: "[error] " + msg });
+        saveChats();
         setStatus("error");
       } finally {
         lockUi(false);
@@ -578,26 +786,81 @@
       }
     }
 
-    function clearChat() {
-      state.messages = [];
-      el("messages").innerHTML = "";
+    function clearCurrentChat() {
+      const chat = activeChat();
+      if (!chat || state.running) return;
+      chat.messages = [];
+      saveChats();
+      renderMessages();
       setStatus("idle");
     }
 
-    function wireEvents() {
-      [
-        "apiBase", "apiKey", "model", "workspace", "background",
-        "session", "sessionMode", "maxTokens", "temperature",
-        "thinkMode", "rebuildPrompt"
-      ].forEach((id) => {
-        el(id).addEventListener("change", () => {
-          readSettingsFromForm();
-        });
-      });
+    function openDialog(id) {
+      el(id).style.display = "flex";
+    }
 
+    function closeDialog(id) {
+      el(id).style.display = "none";
+    }
+
+    function openNewChatDialog() {
+      el("newChatTitle").value = "";
+      el("newChatSession").value = createSessionId();
+      el("newChatWorkspace").value = "";
+      el("newChatBackground").value = "";
+      openDialog("newChatDialog");
+    }
+
+    function createNewChatFromDialog() {
+      const title = el("newChatTitle").value.trim() || "New Chat";
+      const session = el("newChatSession").value.trim() || createSessionId();
+      const workspace = el("newChatWorkspace").value.trim();
+      const background = el("newChatBackground").value.trim();
+
+      if (!workspace) {
+        alert("Workspace is required when creating a new chat.");
+        return;
+      }
+
+      const chat = createChat(title, session, workspace, background);
+      state.chats.unshift(chat);
+      state.activeChatId = chat.id;
+      saveChats();
+      closeDialog("newChatDialog");
+      renderAll();
+      setStatus("idle");
+    }
+
+    function bindSettingsToForm() {
+      el("apiBase").value = state.settings.apiBase || "";
+      el("apiKey").value = state.settings.apiKey || "";
+      el("model").value = state.settings.model || "";
+      el("sessionMode").value = state.settings.sessionMode || "append";
+      el("maxTokens").value = state.settings.maxTokens || "";
+      el("temperature").value = state.settings.temperature || "";
+      el("thinkMode").checked = !!state.settings.thinkMode;
+      el("rebuildPrompt").checked = !!state.settings.rebuildSystemPrompt;
+    }
+
+    function saveSettingsFromForm() {
+      state.settings = {
+        apiBase: el("apiBase").value.trim(),
+        apiKey: el("apiKey").value,
+        model: el("model").value.trim(),
+        sessionMode: el("sessionMode").value,
+        maxTokens: el("maxTokens").value.trim(),
+        temperature: el("temperature").value.trim(),
+        thinkMode: el("thinkMode").checked,
+        rebuildSystemPrompt: el("rebuildPrompt").checked,
+      };
+      saveSettings();
+      closeDialog("settingsDialog");
+    }
+
+    function wireEvents() {
       el("sendBtn").addEventListener("click", sendMessage);
       el("stopBtn").addEventListener("click", stopRunning);
-      el("clearBtn").addEventListener("click", clearChat);
+      el("clearBtn").addEventListener("click", clearCurrentChat);
 
       el("input").addEventListener("keydown", (ev) => {
         if (ev.key === "Enter" && !ev.shiftKey) {
@@ -605,14 +868,42 @@
           sendMessage();
         }
       });
+
+      el("newChatBtn").addEventListener("click", openNewChatDialog);
+      el("cancelNewChatBtn").addEventListener("click", () => closeDialog("newChatDialog"));
+      el("createNewChatBtn").addEventListener("click", createNewChatFromDialog);
+
+      el("openSettingsBtn").addEventListener("click", () => {
+        bindSettingsToForm();
+        openDialog("settingsDialog");
+      });
+      el("cancelSettingsBtn").addEventListener("click", () => closeDialog("settingsDialog"));
+      el("saveSettingsBtn").addEventListener("click", saveSettingsFromForm);
+
+      el("newChatDialog").addEventListener("click", (ev) => {
+        if (ev.target === el("newChatDialog")) closeDialog("newChatDialog");
+      });
+      el("settingsDialog").addEventListener("click", (ev) => {
+        if (ev.target === el("settingsDialog")) closeDialog("settingsDialog");
+      });
     }
 
     function bootstrap() {
       loadSettings();
-      bindSettingsToForm();
+      loadChats();
+
+      if (!state.chats.length) {
+        state.activeChatId = null;
+      }
+
       wireEvents();
+      bindSettingsToForm();
+      renderAll();
       setStatus("idle");
-      appendMessage("assistant", "Welcome. Configure API/workspace/session on the left, then start chatting.");
+
+      if (!state.chats.length) {
+        openNewChatDialog();
+      }
     }
 
     bootstrap();

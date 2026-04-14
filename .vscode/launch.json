@@ -1,0 +1,64 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "agent-lab: API",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "agent_lab.cli",
+      "args": [
+        "api",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "8000"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "justMyCode": true
+    },
+    {
+      "name": "agent-lab: Web",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "agent_lab.cli",
+      "args": [
+        "web",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "7860",
+        "--api-base",
+        "http://127.0.0.1:8000"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "justMyCode": true
+    },
+    {
+      "name": "agent-lab: Service",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "agent_lab.cli",
+      "args": [
+        "service",
+        "run",
+        "--interval",
+        "2.0"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "justMyCode": true
+    }
+  ],
+  "compounds": [
+    {
+      "name": "agent-lab: API + Web + Service",
+      "configurations": [
+        "agent-lab: API",
+        "agent-lab: Web",
+        "agent-lab: Service"
+      ]
+    }
+  ]
+}
